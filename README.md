@@ -100,6 +100,12 @@ Data behavior:
 - Without Supabase env vars, the app reads seed data from `apps/web/lib/mock-data.ts`.
 - With Supabase env vars, public problem, contest, contest-problem, and standings pages read from Supabase through `apps/web/lib/data.ts`.
 
+AI drafting behavior:
+
+- `/admin/ai` generates structured problem drafts with statement, samples, package manifest, reference solution, validator sketch, generator sketch, hidden-test ideas, and review checklist.
+- Without `OPENAI_API_KEY`, drafts use a deterministic local fallback for demos.
+- With `OPENAI_API_KEY`, `/api/admin/ai-drafts` calls the OpenAI Responses API with structured JSON output and falls back locally if the provider call fails.
+
 ## Supabase
 
 The initial schema lives in `supabase/migrations/0001_initial_schema.sql`.

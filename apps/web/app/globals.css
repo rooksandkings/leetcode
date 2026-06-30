@@ -401,6 +401,24 @@ tr:last-child td {
   padding: 14px;
 }
 
+.draft-output {
+  grid-column: 1 / -1;
+}
+
+.draft-output pre {
+  max-height: 420px;
+}
+
+.review-row {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 0 12px;
+}
+
 .problem-score {
   display: grid;
   min-width: 72px;
