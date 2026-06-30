@@ -79,6 +79,12 @@ npm.cmd run dev
 
 The app is under `apps/web` and defaults to `http://localhost:3000`.
 
+Submission behavior:
+
+- Without Supabase env vars, `/api/submissions` returns a local queued response for UI development.
+- With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
+- `/login` uses Supabase magic links when env vars are configured.
+
 ## Supabase
 
 The initial schema lives in `supabase/migrations/0001_initial_schema.sql`.

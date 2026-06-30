@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Braces, ClipboardList, LayoutDashboard, ShieldCheck, Trophy } from "lucide-react";
+import { Braces, ClipboardList, LayoutDashboard, LogIn, ShieldCheck, Trophy } from "lucide-react";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -28,10 +28,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <ShieldCheck size={16} />
             Admin
           </Link>
+          <Link href="/login">
+            <LogIn size={16} />
+            Login
+          </Link>
         </nav>
       </header>
       {children}
     </div>
   );
 }
-
