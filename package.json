@@ -1,0 +1,18 @@
+{
+  "name": "codearena",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "packages/shared"
+  ],
+  "scripts": {
+    "dev": "npm --workspace apps/web run dev",
+    "build": "npm --workspace apps/web run build",
+    "lint": "npm --workspace apps/web run lint",
+    "typecheck": "npm --workspace apps/web run typecheck",
+    "judge:test": "python -m unittest discover apps/judge-worker/tests",
+    "judge:sample": "python apps/judge-worker/cli.py judge --problem problems/sum-array --submission examples/submissions/sum_array_ac.py"
+  }
+}
+

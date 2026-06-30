@@ -1,0 +1,36 @@
+{
+  "slug": "sum-array",
+  "title": "Sum Array",
+  "timeLimitMs": 1000,
+  "memoryLimitMb": 256,
+  "checker": {
+    "type": "token"
+  },
+  "tests": [
+    {
+      "name": "sample-1",
+      "input": "samples/1.in",
+      "expected": "samples/1.out",
+      "hidden": false
+    },
+    {
+      "name": "sample-2",
+      "input": "samples/2.in",
+      "expected": "samples/2.out",
+      "hidden": false
+    },
+    {
+      "name": "hidden-small",
+      "input": "tests/001.in",
+      "expected": "tests/001.out",
+      "hidden": true
+    },
+    {
+      "name": "hidden-negative",
+      "input": "tests/002.in",
+      "expected": "tests/002.out",
+      "hidden": true
+    }
+  ]
+}
+

@@ -1,0 +1,95 @@
+# CodeArena
+
+CodeArena is a public, ICPC-style competitive programming platform focused on Python submissions, admin-authored problems, custom checkers, and a judge architecture that can grow into a real contest system.
+
+The project is intentionally scoped as a serious portfolio build: Codeforces-style standard input/output problems first, LeetCode-style wrappers later.
+
+## Current Scope
+
+- Public problem browsing and contest pages
+- Python 3 submissions only
+- ICPC standings: solved count, penalty, first accepted time
+- Admin-only problem creation
+- Final verdict shown by default with collapsible per-test details
+- Built-in checkers: exact, line, token, floating point
+- Optional custom `checker.py`
+- Local judge worker core with timeout, output cap, and hidden-test redaction
+- Supabase schema for auth-backed profiles, problems, contests, submissions, and judge jobs
+
+## Stack
+
+- Web app: Next.js, TypeScript, Tailwind CSS
+- Hosting: Vercel for the product UI and lightweight APIs
+- Database/Auth/Storage/Realtime: Supabase
+- Judge: Fly.io Machines running isolated Python judge workers
+- AI: admin-only problem drafting and test ideation, never auto-publish
+
+## Repository Layout
+
+```text
+apps/
+  web/                 Next.js app
+  judge-worker/        Python judge worker and checker core
+docs/                  Architecture, judge security, and problem format notes
+examples/              Sample submissions for local judge verification
+packages/
+  shared/              TypeScript domain contracts
+problems/              Seed problem packages
+supabase/
+  migrations/          Database schema
+```
+
+## Local Judge Quick Start
+
+Run the seeded problem against a known accepted solution:
+
+```powershell
+python apps/judge-worker/cli.py judge --problem problems/sum-array --submission examples/submissions/sum_array_ac.py
+```
+
+Run judge unit tests:
+
+```powershell
+python -m unittest discover apps/judge-worker/tests
+```
+
+## Web App Quick Start
+
+Install dependencies from the repo root:
+
+```powershell
+npm.cmd install
+```
+
+Start the web app:
+
+```powershell
+npm.cmd run dev
+```
+
+The app is under `apps/web` and defaults to `http://localhost:3000`.
+
+## MVP Roadmap
+
+1. Ship the local judge vertical slice with exact, line, token, float, and custom checkers.
+2. Wire the Next.js submission form to Supabase submissions and judge jobs.
+3. Deploy a Fly.io judge worker that claims jobs and writes verdicts.
+4. Add contest registration and ICPC standings.
+5. Add admin problem-package upload, validation, and immutable versions.
+6. Add AI-assisted problem drafting for admins with mandatory human review.
+
+## Product Rules
+
+- Problem versions are immutable after publish.
+- Hidden tests are never sent to the browser.
+- Custom checkers, validators, generators, and submissions are all treated as untrusted code.
+- The UI may show per-test status, runtime, memory, and redacted messages, but not hidden inputs or expected outputs.
+- AI can draft content, but only an admin can publish it.
+
+## Deployment Plan
+
+- Vercel runs the Next.js app.
+- Supabase stores users, problem metadata, submissions, judge jobs, and public contest state.
+- Supabase Storage stores versioned problem packages and generated artifacts.
+- Fly.io runs judge workers with Linux isolation and one active submission per sandbox.
+
