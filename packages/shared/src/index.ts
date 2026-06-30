@@ -8,6 +8,7 @@ export type Verdict =
   | "memory_limit_exceeded"
   | "runtime_error"
   | "compilation_error"
+  | "output_limit_exceeded"
   | "judge_error";
 
 export type CheckerType = "exact" | "line" | "token" | "float" | "custom";
@@ -63,4 +64,3 @@ export type StandingRow = {
     penaltyMinutes: number;
   }>;
 };
-

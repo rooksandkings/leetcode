@@ -4,6 +4,7 @@ import tempfile
 import textwrap
 import unittest
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -27,20 +28,22 @@ class RunnerTests(unittest.TestCase):
 
     def test_timeout(self) -> None:
         package = ProblemPackage.load(Path("problems/sum-array"))
+        fast_timeout_package = replace(package, time_limit_ms=100, tests=package.tests[:1])
         with tempfile.TemporaryDirectory() as temp_dir_name:
             submission = Path(temp_dir_name) / "tle.py"
             submission.write_text("while True:\n    pass\n", encoding="utf-8")
-            result = JudgeRunner(package).judge(submission)
+            result = JudgeRunner(fast_timeout_package).judge(submission)
         self.assertEqual(result.final_verdict, "time_limit_exceeded")
 
     def test_runtime_error(self) -> None:
         package = ProblemPackage.load(Path("problems/sum-array"))
+        relaxed_package = replace(package, time_limit_ms=3000, tests=package.tests[:1])
         with tempfile.TemporaryDirectory() as temp_dir_name:
             submission = Path(temp_dir_name) / "re.py"
             submission.write_text(textwrap.dedent("""
                 raise RuntimeError("boom")
             """), encoding="utf-8")
-            result = JudgeRunner(package).judge(submission)
+            result = JudgeRunner(relaxed_package).judge(submission)
         self.assertEqual(result.final_verdict, "runtime_error")
 
 

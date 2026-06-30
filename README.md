@@ -15,6 +15,7 @@ The project is intentionally scoped as a serious portfolio build: Codeforces-sty
 - Optional custom `checker.py`
 - Local judge worker core with timeout, output cap, and hidden-test redaction
 - Supabase schema for auth-backed profiles, problems, contests, submissions, and judge jobs
+- Seed-backed Next.js app routes for dashboard, problems, submissions, contests, standings, and admin workflows
 
 ## Stack
 
@@ -53,6 +54,15 @@ Run judge unit tests:
 python -m unittest discover apps/judge-worker/tests
 ```
 
+Run the full local verification set:
+
+```powershell
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd run build
+python -m unittest discover apps/judge-worker/tests
+```
+
 ## Web App Quick Start
 
 Install dependencies from the repo root:
@@ -68,6 +78,20 @@ npm.cmd run dev
 ```
 
 The app is under `apps/web` and defaults to `http://localhost:3000`.
+
+## Supabase
+
+The initial schema lives in `supabase/migrations/0001_initial_schema.sql`.
+
+It includes:
+
+- Auth-backed profiles
+- Immutable problem versions
+- Public/hidden test metadata
+- Contest registration and ICPC standings view
+- Submission and per-test result tables
+- Judge job leasing/finalization RPCs for service-role workers
+- RLS policies that keep hidden tests and judge jobs off the client
 
 ## MVP Roadmap
 
@@ -92,4 +116,3 @@ The app is under `apps/web` and defaults to `http://localhost:3000`.
 - Supabase stores users, problem metadata, submissions, judge jobs, and public contest state.
 - Supabase Storage stores versioned problem packages and generated artifacts.
 - Fly.io runs judge workers with Linux isolation and one active submission per sandbox.
-
