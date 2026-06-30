@@ -121,9 +121,12 @@ Admin problem creation:
 
 - `/admin/problems/new` saves draft problem metadata and validates that the package manifest is JSON with matching `checker.type` and a `tests` array.
 - `/admin/problems/new` can verify a local package path or uploaded `.zip` through the judge worker verifier before publish.
+- `/admin/problems/new` can store a verified package artifact after verification.
 - Without Supabase env vars, drafts are stored in ignored `.local/problem-drafts.json` and shown in `/admin/problems`.
 - Without Supabase env vars, package verification results are stored in ignored `.local/package-verifications.json`.
+- Without Supabase env vars, verified package archives are stored in ignored `.local/problem-packages/`.
 - With Supabase env vars, `/api/admin/problems` inserts draft `problems` and `problem_versions` rows through Supabase RLS.
+- With Supabase env vars, `/api/admin/problem-packages/store` uploads verified archives to the private `problem-packages` Storage bucket.
 - Supabase `problem_versions` include fields for package verification reports and verified timestamps ahead of storage-backed publishing.
 
 Admin contest creation:

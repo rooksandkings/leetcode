@@ -6,11 +6,20 @@ import type { CheckerType, ProblemSummary } from "@codearena/shared";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 type VerifyState = "idle" | "verifying" | "passed" | "failed" | "error";
+type StoreState = "idle" | "storing" | "stored" | "error";
 
 type VerificationReport = {
   ok: boolean;
   errors: string[];
   warnings: string[];
+};
+
+type StoredArtifact = {
+  storagePath: string;
+  localPath?: string;
+  checksumSha256: string;
+  sizeBytes: number;
+  report: VerificationReport;
 };
 
 const defaultManifest = JSON.stringify(
@@ -42,13 +51,17 @@ export function NewProblemForm() {
   const [packagePath, setPackagePath] = useState("problems/sum-array");
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
+  const [storeState, setStoreState] = useState<StoreState>("idle");
   const [verificationReport, setVerificationReport] = useState<VerificationReport | null>(null);
+  const [storedArtifact, setStoredArtifact] = useState<StoredArtifact | null>(null);
   const [state, setState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
 
   async function verifyPackage() {
     setVerifyState("verifying");
+    setStoreState("idle");
     setVerificationReport(null);
+    setStoredArtifact(null);
 
     const response = await fetch("/api/admin/problem-packages/verify", {
       method: "POST",
@@ -66,6 +79,30 @@ export function NewProblemForm() {
     const payload = (await response.json()) as { report: VerificationReport };
     setVerificationReport(payload.report);
     setVerifyState(payload.report.ok ? "passed" : "failed");
+  }
+
+  async function storePackage() {
+    setStoreState("storing");
+    setStoredArtifact(null);
+
+    const response = await fetch("/api/admin/problem-packages/store", {
+      method: "POST",
+      body: packageFile ? packageFormData(packageFile) : JSON.stringify({ packagePath }),
+      headers: packageFile ? undefined : { "content-type": "application/json" },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      setStoreState("error");
+      setVerificationReport({ ok: false, errors: [payload.error ?? "Package storage failed"], warnings: [] });
+      return;
+    }
+
+    const payload = (await response.json()) as { artifact: StoredArtifact };
+    setStoredArtifact(payload.artifact);
+    setVerificationReport(payload.artifact.report);
+    setVerifyState(payload.artifact.report.ok ? "passed" : "failed");
+    setStoreState("stored");
   }
 
   async function saveDraft() {
@@ -195,9 +232,22 @@ export function NewProblemForm() {
               <button className="secondary-button" disabled={verifyState === "verifying"} type="button" onClick={verifyPackage}>
                 {verifyState === "verifying" ? "Verifying" : "Verify Package"}
               </button>
+              <button className="secondary-button" disabled={storeState === "storing"} type="button" onClick={storePackage}>
+                {storeState === "storing" ? "Storing" : "Store Verified"}
+              </button>
               {verifyState === "passed" ? <span className="status accepted">verified</span> : null}
               {verifyState === "failed" || verifyState === "error" ? <span className="status failed">failed</span> : null}
+              {storeState === "stored" ? <span className="status accepted">stored</span> : null}
+              {storeState === "error" ? <span className="status failed">storage failed</span> : null}
             </div>
+            {storedArtifact ? (
+              <div className="result-panel">
+                <h3>Stored Artifact</h3>
+                <p className="subtle">{storedArtifact.storagePath}</p>
+                <p className="subtle">SHA-256 {storedArtifact.checksumSha256}</p>
+                {storedArtifact.localPath ? <p className="subtle">{storedArtifact.localPath}</p> : null}
+              </div>
+            ) : null}
             {verificationReport ? (
               <div className="grid two">
                 <div>

@@ -194,6 +194,25 @@ create table public.admin_audit_logs (
   created_at timestamptz not null default now()
 );
 
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'problem-packages',
+  'problem-packages',
+  false,
+  52428800,
+  array['application/zip', 'application/x-zip-compressed']
+)
+on conflict (id) do update
+set public = excluded.public,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -847,6 +866,10 @@ with check (public.is_admin());
 
 create policy "admins read audit logs" on public.admin_audit_logs
 for select using (public.is_admin());
+
+create policy "admins manage problem package artifacts" on storage.objects
+for all using (bucket_id = 'problem-packages' and public.is_admin())
+with check (bucket_id = 'problem-packages' and public.is_admin());
 
 revoke all on function public.submit_solution(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.create_admin_contest(text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, jsonb) from public, anon, authenticated;

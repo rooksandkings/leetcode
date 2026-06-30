@@ -14,12 +14,14 @@ class VerificationReport:
     ok: bool
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    package: dict[str, object] | None = None
 
     def to_json(self) -> dict[str, object]:
         return {
             "ok": self.ok,
             "errors": self.errors,
             "warnings": self.warnings,
+            "package": self.package,
         }
 
 
@@ -51,7 +53,7 @@ def verify_problem(problem_root: Path) -> VerificationReport:
     else:
         warnings.append("No solutions/reference.py found")
 
-    return VerificationReport(ok=not errors, errors=errors, warnings=warnings)
+    return VerificationReport(ok=not errors, errors=errors, warnings=warnings, package=_package_metadata(package))
 
 
 def _verify_validator(package: ProblemPackage) -> list[str]:
@@ -145,3 +147,19 @@ def _short_message(value: str, limit: int = 240) -> str:
     if len(collapsed) <= limit:
         return collapsed
     return collapsed[: limit - 3] + "..."
+
+
+def _package_metadata(package: ProblemPackage) -> dict[str, object]:
+    return {
+        "slug": package.slug,
+        "title": package.title,
+        "checker": package.checker.get("type", "exact"),
+        "timeLimitMs": package.time_limit_ms,
+        "memoryLimitMb": package.memory_limit_mb,
+        "testCount": len(package.tests),
+        "hiddenTestCount": sum(1 for test in package.tests if test.hidden),
+        "publicTestCount": sum(1 for test in package.tests if not test.hidden),
+        "hasCustomChecker": package.checker.get("type") == "custom",
+        "hasValidator": package.validator is not None,
+        "hasGenerator": package.generator is not None,
+    }
