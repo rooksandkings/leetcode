@@ -121,7 +121,8 @@ create table public.submissions (
   memory_kb integer,
   submitted_at timestamptz not null default now(),
   judged_at timestamptz,
-  check (char_length(source_code) <= 200000)
+  check (char_length(source_code) <= 200000),
+  foreign key (contest_id, problem_version_id) references public.contest_problems (contest_id, problem_version_id)
 );
 
 create index submissions_user_idx on public.submissions (user_id, submitted_at desc);
@@ -300,14 +301,29 @@ begin
       select 1
       from public.contests c
       join public.contest_problems cp on cp.contest_id = c.id
+      join public.problem_versions pv on pv.id = cp.problem_version_id
+      join public.problems p on p.id = pv.problem_id
       join public.contest_registrations cr on cr.contest_id = c.id and cr.user_id = auth.uid()
       where c.id = p_contest_id
         and cp.problem_version_id = p_problem_version_id
         and c.visibility = 'public'
-        and now() between c.starts_at and c.ends_at
+        and p.visibility = 'public'
+        and pv.published_at is not null
+        and now() >= c.starts_at
+        and now() < c.ends_at
     ) then
       raise exception 'contest submission is not allowed';
     end if;
+  elsif not exists (
+    select 1
+    from public.problem_versions pv
+    join public.problems p on p.id = pv.problem_id
+    where pv.id = p_problem_version_id
+      and p.current_version_id = pv.id
+      and p.visibility = 'public'
+      and pv.published_at is not null
+  ) then
+    raise exception 'problem is not available';
   end if;
 
   insert into public.submissions (user_id, problem_version_id, contest_id, source_code)
@@ -468,8 +484,16 @@ problem_scores as (
       where s.contest_id = r.contest_id
         and s.user_id = r.user_id
         and s.problem_version_id = pl.problem_version_id
+        and s.status = 'done'
         and s.submitted_at < fa.first_accepted_at
-        and s.verdict <> 'accepted'
+        and s.verdict in (
+          'wrong_answer',
+          'time_limit_exceeded',
+          'memory_limit_exceeded',
+          'runtime_error',
+          'compilation_error',
+          'output_limit_exceeded'
+        )
     ) as wrong_before_accept
   from registered r
   join problem_labels pl on pl.contest_id = r.contest_id
@@ -574,16 +598,31 @@ create policy "contest registrations are publicly readable" on public.contest_re
 for select using (true);
 
 create policy "users register themselves" on public.contest_registrations
-for insert with check (auth.uid() = user_id);
+for insert with check (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.contests c
+    where c.id = contest_id
+      and c.visibility in ('public', 'unlisted')
+      and now() < c.starts_at
+  )
+);
 
 create policy "users delete their own registration" on public.contest_registrations
-for delete using (auth.uid() = user_id);
+for delete using (
+  auth.uid() = user_id
+  and exists (
+    select 1 from public.contests c
+    where c.id = contest_id and now() < c.starts_at
+  )
+  and not exists (
+    select 1 from public.submissions s
+    where s.contest_id = contest_id and s.user_id = auth.uid()
+  )
+);
 
 create policy "users read their own submissions" on public.submissions
 for select using (auth.uid() = user_id or public.is_admin());
-
-create policy "users insert their own submissions" on public.submissions
-for insert with check (auth.uid() = user_id);
 
 create policy "users read their own test results" on public.submission_test_results
 for select using (
@@ -603,7 +642,9 @@ with check (public.is_admin());
 create policy "admins read audit logs" on public.admin_audit_logs
 for select using (public.is_admin());
 
+revoke all on function public.submit_solution(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.lease_judge_job(text, integer) from public, anon, authenticated;
 revoke all on function public.finalize_submission(uuid, public.verdict, integer, integer, jsonb) from public, anon, authenticated;
+grant execute on function public.submit_solution(uuid, uuid, text) to authenticated;
 grant execute on function public.lease_judge_job(text, integer) to service_role;
 grant execute on function public.finalize_submission(uuid, public.verdict, integer, integer, jsonb) to service_role;

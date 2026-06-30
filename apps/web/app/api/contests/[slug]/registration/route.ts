@@ -5,6 +5,7 @@ import {
   registerLocalContest,
   unregisterLocalContest,
 } from "@/lib/local-contest-registrations";
+import { contests } from "@/lib/mock-data";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -17,6 +18,11 @@ export async function GET(_request: Request, context: RouteContext) {
   const { slug } = await context.params;
 
   if (!hasSupabaseEnv()) {
+    const contest = localContestForSlug(slug);
+    if (!contest) {
+      return NextResponse.json({ error: "Contest not found" }, { status: 404 });
+    }
+
     return NextResponse.json({
       registered: isLocalContestRegistered(slug),
       registeredCount: countLocalContestRegistrations(slug),
@@ -59,6 +65,14 @@ export async function POST(_request: Request, context: RouteContext) {
   const { slug } = await context.params;
 
   if (!hasSupabaseEnv()) {
+    const contest = localContestForSlug(slug);
+    if (!contest) {
+      return NextResponse.json({ error: "Contest not found" }, { status: 404 });
+    }
+    if (new Date() >= new Date(contest.startsAt)) {
+      return NextResponse.json({ error: "Registration is closed" }, { status: 403 });
+    }
+
     const registration = registerLocalContest(slug);
     return NextResponse.json(
       {
@@ -104,6 +118,14 @@ export async function DELETE(_request: Request, context: RouteContext) {
   const { slug } = await context.params;
 
   if (!hasSupabaseEnv()) {
+    const contest = localContestForSlug(slug);
+    if (!contest) {
+      return NextResponse.json({ error: "Contest not found" }, { status: 404 });
+    }
+    if (new Date() >= new Date(contest.startsAt)) {
+      return NextResponse.json({ error: "Cannot leave after contest starts" }, { status: 403 });
+    }
+
     unregisterLocalContest(slug);
     return NextResponse.json({
       registered: false,
@@ -142,4 +164,8 @@ export async function DELETE(_request: Request, context: RouteContext) {
 async function findContestId(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, slug: string) {
   const { data } = await supabase.from("contests").select("id").eq("slug", slug).eq("visibility", "public").single();
   return data;
+}
+
+function localContestForSlug(slug: string) {
+  return contests.find((contest) => contest.slug === slug);
 }

@@ -92,6 +92,8 @@ Submission behavior:
 - Without Supabase env vars, `/api/submissions` runs the local Python judge in development and returns a real final verdict with redacted per-test results.
 - Local judged submissions are stored in ignored `.local/submissions.json`, so `/submissions/[id]` and the dashboard recent-submissions list work during development.
 - Contest problem links pass contest context into submissions; local contest submissions are folded into the ICPC standings as the `local` handle.
+- Local contest submissions require registration, a valid contest problem, and an active contest window before they can affect standings.
+- Contest submissions use the server-resolved contest slug and locked contest problem version, not a client-supplied contest id.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.
@@ -102,6 +104,7 @@ Contest registration behavior:
 - Without Supabase env vars, registration is stored in ignored `.local/contest-registrations.json` and the `local` handle appears in standings even before submitting.
 - With Supabase env vars, `/api/contests/[slug]/registration` writes to `contest_registrations` through Supabase RLS.
 - Contest cards and contest headers show the current registered count from local storage or Supabase.
+- Registration closes at contest start; leaving after start or after submitting is blocked by the Supabase policy.
 
 Data behavior:
 

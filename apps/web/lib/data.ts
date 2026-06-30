@@ -2,6 +2,7 @@ import type { ContestSummary, ProblemSummary, StandingRow, SubmissionSummary } f
 import type { AdminProblemRow } from "@/components/admin-problem-table";
 import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
+import { isLocalContestSubmissionScoreable } from "@/lib/contest-submission-eligibility";
 import { deriveStandings } from "@/lib/icpc";
 import { countLocalContestRegistrations, listLocalContestRegistrations } from "@/lib/local-contest-registrations";
 import { listLocalProblemDrafts } from "@/lib/local-problem-drafts";
@@ -240,7 +241,9 @@ export async function listContestProblems(contestSlug: string): Promise<ContestP
 
 export async function getStandings(contestSlug: string, labels: string[]): Promise<StandingRow[]> {
   if (!hasSupabaseEnv()) {
-    const localContestSubmissions = await listLocalContestSubmissions(contestSlug);
+    const localContestSubmissions = (await listLocalContestSubmissions(contestSlug)).filter((submission) =>
+      isLocalContestSubmissionScoreable(submission, contestSlug),
+    );
     const localRegisteredHandles = listLocalContestRegistrations(contestSlug).map((registration) => registration.handle);
     if (!localContestSubmissions.length && !localRegisteredHandles.length) {
       return deriveStandings(contestEvents, labels);

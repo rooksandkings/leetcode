@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { assertLocalContestSubmissionAllowed, ContestSubmissionEligibilityError } from "@/lib/contest-submission-eligibility";
 import { isLocalJudgeAllowed, judgeLocalSubmission } from "@/lib/local-judge";
 import { problemTitleForSlug, recordLocalSubmission } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
@@ -8,11 +9,15 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const body = (await request.json()) as {
     problemSlug?: string;
-    contestId?: string;
+    contestId?: unknown;
     contestSlug?: string;
     language?: string;
     sourceCode?: string;
   };
+
+  if (body.contestId) {
+    return NextResponse.json({ error: "Use contestSlug for contest submissions" }, { status: 400 });
+  }
 
   if (!body.problemSlug || body.language !== "python3" || !body.sourceCode?.trim()) {
     return NextResponse.json({ error: "Invalid submission" }, { status: 400 });
@@ -31,7 +36,7 @@ export async function POST(request: Request) {
 
     const { data: problem, error: problemError } = await supabase
       .from("problems")
-      .select("current_version_id")
+      .select("id,current_version_id")
       .eq("slug", body.problemSlug)
       .eq("visibility", "public")
       .single();
@@ -40,19 +45,47 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Problem is not available" }, { status: 404 });
     }
 
-    let contestId = body.contestId ?? null;
-    if (!contestId && body.contestSlug) {
-      const { data: contest } = await supabase
+    let contestId: string | null = null;
+    let problemVersionId = problem.current_version_id;
+    if (body.contestSlug) {
+      const { data: contest, error: contestError } = await supabase
         .from("contests")
-        .select("id")
+        .select("id,starts_at,ends_at")
         .eq("slug", body.contestSlug)
         .eq("visibility", "public")
         .single();
-      contestId = contest?.id ?? null;
+
+      if (contestError || !contest) {
+        return NextResponse.json({ error: "Contest is not available" }, { status: 404 });
+      }
+
+      const { data: contestProblems, error: contestProblemsError } = await supabase
+        .from("contest_problems")
+        .select("problem_version_id")
+        .eq("contest_id", contest.id);
+
+      if (contestProblemsError || !contestProblems?.length) {
+        return NextResponse.json({ error: "Contest problem is not available" }, { status: 404 });
+      }
+
+      const versionIds = contestProblems.map((candidate) => candidate.problem_version_id);
+      const { data: contestVersion, error: contestVersionError } = await supabase
+        .from("problem_versions")
+        .select("id")
+        .eq("problem_id", problem.id)
+        .in("id", versionIds)
+        .single();
+
+      if (contestVersionError || !contestVersion) {
+        return NextResponse.json({ error: "Problem is not in this contest" }, { status: 400 });
+      }
+
+      contestId = String(contest.id);
+      problemVersionId = contestVersion.id;
     }
 
     const { data: submissionId, error: submitError } = await supabase.rpc("submit_solution", {
-      p_problem_version_id: problem.current_version_id,
+      p_problem_version_id: problemVersionId,
       p_contest_id: contestId,
       p_source_code: body.sourceCode,
     });
@@ -76,6 +109,7 @@ export async function POST(request: Request) {
   }
 
   try {
+    assertLocalContestSubmissionAllowed(body.contestSlug, body.problemSlug);
     const result = await judgeLocalSubmission(body.problemSlug, body.sourceCode);
     const id = `local_${Date.now()}`;
     await recordLocalSubmission({
@@ -102,6 +136,10 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof ContestSubmissionEligibilityError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+
     return NextResponse.json(
       {
         error: error instanceof Error ? error.message : "Local judge failed",

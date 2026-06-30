@@ -55,8 +55,9 @@ export function SubmissionPanel({ problemSlug, contestSlug }: { problemSlug: str
     });
 
     if (!response.ok) {
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
       setState("error");
-      setMessage("Submission was not accepted by the API");
+      setMessage(payload.error ?? "Submission was not accepted by the API");
       return;
     }
 
@@ -122,7 +123,7 @@ export function SubmissionPanel({ problemSlug, contestSlug }: { problemSlug: str
                 </h2>
                 <p className="subtle">
                   Runtime {result.runtimeMs ?? 0} ms
-                  {result.memoryKb ? ` · Memory ${result.memoryKb} KB` : ""}
+                  {result.memoryKb ? ` - Memory ${result.memoryKb} KB` : ""}
                 </p>
               </div>
             </div>
