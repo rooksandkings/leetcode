@@ -13,6 +13,7 @@ The project is intentionally scoped as a serious portfolio build: Codeforces-sty
 - Final verdict shown by default with collapsible per-test details
 - Built-in checkers: exact, line, token, floating point
 - Optional custom `checker.py`
+- Optional `validator.py` and deterministic `generator.py` package verification
 - Local judge worker core with timeout, output cap, and hidden-test redaction
 - Supabase schema for auth-backed profiles, problems, contests, submissions, and judge jobs
 - Seed-backed Next.js app routes for dashboard, problems, submissions, contests, standings, and admin workflows
@@ -123,6 +124,16 @@ It includes:
 - Custom checkers, validators, generators, and submissions are all treated as untrusted code.
 - The UI may show per-test status, runtime, memory, and redacted messages, but not hidden inputs or expected outputs.
 - AI can draft content, but only an admin can publish it.
+
+## Problemsetting Contracts
+
+Problem packages may include:
+
+- `checkers/checker.py` for custom output judging
+- `validators/validator.py` to reject invalid test inputs during package verification
+- `generators/generator.py` to reproduce declared generated tests by seed
+
+`python apps/judge-worker/cli.py verify --problem problems/sum-array` checks all three before a package is published.
 
 ## Dependency Audit Note
 

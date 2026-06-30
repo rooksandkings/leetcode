@@ -32,6 +32,8 @@ class ProblemPackage:
     time_limit_ms: int
     memory_limit_mb: int
     checker: dict[str, Any]
+    validator: dict[str, Any] | None
+    generator: dict[str, Any] | None
     tests: list[TestCase]
     statement: str
 
@@ -81,6 +83,8 @@ class ProblemPackage:
             time_limit_ms=int(manifest.get("timeLimitMs", 2000)),
             memory_limit_mb=int(manifest.get("memoryLimitMb", 256)),
             checker=dict(manifest.get("checker", {"type": "exact"})),
+            validator=dict(manifest["validator"]) if isinstance(manifest.get("validator"), dict) else None,
+            generator=dict(manifest["generator"]) if isinstance(manifest.get("generator"), dict) else None,
             tests=tests,
             statement=statement,
         )
@@ -100,4 +104,3 @@ def _resolve_child(root: Path, raw_path: str) -> Path:
     except ValueError as exc:
         raise ProblemPackageError(f"Path escapes problem package: {raw_path}") from exc
     return resolved
-

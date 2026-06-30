@@ -6,6 +6,22 @@
   "checker": {
     "type": "token"
   },
+  "validator": {
+    "path": "validators/validator.py"
+  },
+  "generator": {
+    "path": "generators/generator.py",
+    "cases": [
+      {
+        "seed": 1,
+        "input": "tests/001.in"
+      },
+      {
+        "seed": 2,
+        "input": "tests/002.in"
+      }
+    ]
+  },
   "tests": [
     {
       "name": "sample-1",
@@ -33,4 +49,3 @@
     }
   ]
 }
-

@@ -41,7 +41,7 @@ Given an array of integers, print the sum of its elements.',
   'token',
   '{}'::jsonb,
   'problem-packages/sum-array/v1.zip',
-  'd937fbc26162aeeb0aa6704353fb2aca34c10418b81267ee12a7c892c11dd9f9',
+  '49f7fdaa9037f4b20f80a69c64d0a5d71a20780d27fa8a927a9a880e9afe754e',
   now()
 )
 on conflict (problem_id, version) do nothing;
@@ -100,4 +100,3 @@ values (
   1
 )
 on conflict (contest_id, problem_version_id) do nothing;
-

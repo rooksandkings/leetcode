@@ -15,6 +15,10 @@ tests/
   002.out
 checkers/
   checker.py
+validators/
+  validator.py
+generators/
+  generator.py
 solutions/
   reference.py
   wrong/
@@ -31,6 +35,18 @@ solutions/
   "memoryLimitMb": 256,
   "checker": {
     "type": "token"
+  },
+  "validator": {
+    "path": "validators/validator.py"
+  },
+  "generator": {
+    "path": "generators/generator.py",
+    "cases": [
+      {
+        "seed": 1,
+        "input": "tests/001.in"
+      }
+    ]
   },
   "tests": [
     {
@@ -57,3 +73,22 @@ solutions/
 - `float`: compares numeric tokens with absolute and relative tolerance.
 - `custom`: executes `checkers/checker.py input expected actual`.
 
+## Validator Contract
+
+Optional validators run during package verification:
+
+```text
+python validators/validator.py input.txt
+```
+
+Exit `0` means valid input. Any non-zero exit rejects the package before publish.
+
+## Generator Contract
+
+Optional generators make hidden tests reproducible. Each manifest case declares a seed and the input file it must reproduce:
+
+```text
+python generators/generator.py seed
+```
+
+The generator output is normalized for line endings and compared with the declared input file.

@@ -37,6 +37,8 @@
 - Add immutable problem versions.
 - Add built-in checker selection.
 - Add custom checker review.
+- Add validator verification. Done.
+- Add deterministic generator verification. Done.
 
 ## Phase 6: AI Assist
 
