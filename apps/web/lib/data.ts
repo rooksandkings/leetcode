@@ -1,9 +1,11 @@
 import type { ContestSummary, ProblemSummary, StandingRow, SubmissionSummary } from "@codearena/shared";
+import type { AdminContestRow } from "@/components/admin-contest-table";
 import type { AdminProblemRow } from "@/components/admin-problem-table";
 import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
 import { isLocalContestSubmissionScoreable } from "@/lib/contest-submission-eligibility";
 import { deriveStandings } from "@/lib/icpc";
+import { listLocalContestDrafts } from "@/lib/local-contest-drafts";
 import { countLocalContestRegistrations, listLocalContestRegistrations } from "@/lib/local-contest-registrations";
 import { listLocalProblemDrafts } from "@/lib/local-problem-drafts";
 import { getLocalSubmission, listLocalContestSubmissions, listLocalSubmissionSummaries } from "@/lib/local-submissions";
@@ -85,6 +87,62 @@ export async function listAdminProblems(): Promise<AdminProblemRow[]> {
     submissionCount: 0,
     status: problem.visibility === "draft" ? "draft" : "published",
     updatedAt: String(problem.updated_at ?? ""),
+  }));
+}
+
+export async function listAdminContests(): Promise<AdminContestRow[]> {
+  if (!hasSupabaseEnv()) {
+    const draftRows: AdminContestRow[] = listLocalContestDrafts().map((draft) => ({
+      slug: draft.slug,
+      title: draft.title,
+      status: "draft",
+      startsAt: draft.startsAt,
+      endsAt: draft.endsAt,
+      registrationClosesAt: draft.registrationClosesAt,
+      problemCount: draft.problems.length,
+      updatedAt: draft.updatedAt,
+    }));
+    const publishedRows: AdminContestRow[] = contests.map((contest) => ({
+      slug: contest.slug,
+      title: contest.title,
+      status: "published",
+      startsAt: contest.startsAt,
+      endsAt: contest.endsAt,
+      problemCount: contestProblems.length,
+    }));
+    return [...draftRows, ...publishedRows];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("contests")
+    .select("id,slug,title,starts_at,ends_at,registration_closes_at,visibility,updated_at")
+    .order("updated_at", { ascending: false });
+
+  if (error || !data) {
+    return [];
+  }
+
+  const counts = await Promise.all(
+    data.map(async (contest) => {
+      const { count } = await supabase
+        .from("contest_problems")
+        .select("*", { count: "exact", head: true })
+        .eq("contest_id", contest.id);
+      return [String(contest.id), count ?? 0] as const;
+    }),
+  );
+  const countByContestId = new Map(counts);
+
+  return data.map((contest) => ({
+    slug: String(contest.slug),
+    title: String(contest.title),
+    status: contest.visibility === "draft" ? "draft" : "published",
+    startsAt: String(contest.starts_at),
+    endsAt: String(contest.ends_at),
+    registrationClosesAt: contest.registration_closes_at ? String(contest.registration_closes_at) : undefined,
+    problemCount: countByContestId.get(String(contest.id)) ?? 0,
+    updatedAt: String(contest.updated_at ?? ""),
   }));
 }
 

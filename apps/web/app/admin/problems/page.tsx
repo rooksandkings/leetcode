@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { FilePlus2, Wand2 } from "lucide-react";
+import { FilePlus2, Trophy, Wand2 } from "lucide-react";
 import { AdminProblemTable } from "@/components/admin-problem-table";
 import { listAdminProblems } from "@/lib/data";
 
@@ -14,6 +14,10 @@ export default async function AdminProblemsPage() {
           <h1>Problem Packages</h1>
         </div>
         <div className="actions">
+          <Link className="secondary-button" href="/admin/contests">
+            <Trophy size={16} />
+            Contests
+          </Link>
           <Link className="secondary-button" href="/admin/ai">
             <Wand2 size={16} />
             AI Drafts

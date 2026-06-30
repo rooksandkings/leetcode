@@ -348,6 +348,134 @@ begin
 end;
 $$;
 
+create or replace function public.create_admin_contest(
+  p_title text,
+  p_slug text,
+  p_description text,
+  p_registration_opens_at timestamptz,
+  p_registration_closes_at timestamptz,
+  p_starts_at timestamptz,
+  p_ends_at timestamptz,
+  p_standings_frozen_at timestamptz,
+  p_standings_released_at timestamptz,
+  p_assignments jsonb
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_contest_id uuid;
+  v_assignment jsonb;
+  v_display_order integer := 0;
+  v_label text;
+  v_problem_slug text;
+  v_problem_version_id uuid;
+  v_seen_labels text[] := array[]::text[];
+  v_seen_versions uuid[] := array[]::uuid[];
+begin
+  if auth.uid() is null then
+    raise exception 'authentication required';
+  end if;
+
+  if not public.is_admin() then
+    raise exception 'admin required';
+  end if;
+
+  if p_title is null or length(trim(p_title)) = 0 then
+    raise exception 'contest title is required';
+  end if;
+
+  if p_slug is null or p_slug !~ '^[a-z0-9-]+$' then
+    raise exception 'contest slug is invalid';
+  end if;
+
+  if p_ends_at <= p_starts_at then
+    raise exception 'contest end must be after start';
+  end if;
+
+  if p_assignments is null or jsonb_typeof(p_assignments) <> 'array' or jsonb_array_length(p_assignments) = 0 then
+    raise exception 'at least one problem assignment is required';
+  end if;
+
+  insert into public.contests (
+    slug,
+    title,
+    description,
+    registration_opens_at,
+    registration_closes_at,
+    starts_at,
+    ends_at,
+    standings_frozen_at,
+    standings_released_at,
+    visibility,
+    created_by
+  )
+  values (
+    p_slug,
+    trim(p_title),
+    nullif(trim(coalesce(p_description, '')), ''),
+    p_registration_opens_at,
+    p_registration_closes_at,
+    p_starts_at,
+    p_ends_at,
+    p_standings_frozen_at,
+    p_standings_released_at,
+    'draft',
+    auth.uid()
+  )
+  returning id into v_contest_id;
+
+  for v_assignment in select value from jsonb_array_elements(p_assignments)
+  loop
+    v_display_order := v_display_order + 1;
+    v_label := upper(trim(v_assignment->>'label'));
+    v_problem_slug := lower(trim(v_assignment->>'problemSlug'));
+
+    if v_label is null or v_label !~ '^[A-Z][A-Z0-9]{0,3}$' then
+      raise exception 'problem label is invalid';
+    end if;
+
+    if v_label = any(v_seen_labels) then
+      raise exception 'duplicate problem label: %', v_label;
+    end if;
+    v_seen_labels := array_append(v_seen_labels, v_label);
+
+    select pv.id into v_problem_version_id
+    from public.problems p
+    join public.problem_versions pv on pv.id = p.current_version_id
+    where p.slug = v_problem_slug
+      and p.visibility = 'public'
+      and pv.published_at is not null;
+
+    if v_problem_version_id is null then
+      raise exception 'problem is not publishable for contest: %', v_problem_slug;
+    end if;
+
+    if v_problem_version_id = any(v_seen_versions) then
+      raise exception 'duplicate problem assignment: %', v_problem_slug;
+    end if;
+    v_seen_versions := array_append(v_seen_versions, v_problem_version_id);
+
+    insert into public.contest_problems (
+      contest_id,
+      problem_version_id,
+      label,
+      display_order
+    )
+    values (
+      v_contest_id,
+      v_problem_version_id,
+      v_label,
+      v_display_order
+    );
+  end loop;
+
+  return v_contest_id;
+end;
+$$;
+
 create or replace function public.lease_judge_job(
   p_worker_id text,
   p_lease_seconds integer default 60
@@ -708,8 +836,10 @@ create policy "admins read audit logs" on public.admin_audit_logs
 for select using (public.is_admin());
 
 revoke all on function public.submit_solution(uuid, uuid, text) from public, anon, authenticated;
+revoke all on function public.create_admin_contest(text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, jsonb) from public, anon, authenticated;
 revoke all on function public.lease_judge_job(text, integer) from public, anon, authenticated;
 revoke all on function public.finalize_submission(uuid, public.verdict, integer, integer, jsonb) from public, anon, authenticated;
 grant execute on function public.submit_solution(uuid, uuid, text) to authenticated;
+grant execute on function public.create_admin_contest(text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, jsonb) to authenticated;
 grant execute on function public.lease_judge_job(text, integer) to service_role;
 grant execute on function public.finalize_submission(uuid, public.verdict, integer, integer, jsonb) to service_role;

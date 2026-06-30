@@ -32,7 +32,7 @@
 - [x] Resolve contest submissions and statements against locked problem versions.
 - [x] Snapshot participant handles for historical standings.
 - [ ] Add standings freeze UI and release behavior.
-- [ ] Add admin contest creation and problem assignment.
+- [x] Add admin contest creation and problem assignment.
 
 ## Phase 5: Admin Problemsetting
 

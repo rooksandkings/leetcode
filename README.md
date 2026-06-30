@@ -122,6 +122,13 @@ Admin problem creation:
 - Without Supabase env vars, drafts are stored in ignored `.local/problem-drafts.json` and shown in `/admin/problems`.
 - With Supabase env vars, `/api/admin/problems` inserts draft `problems` and `problem_versions` rows through Supabase RLS.
 
+Admin contest creation:
+
+- `/admin/contests/new` saves draft contest metadata, timing rules, and label-to-problem assignments.
+- Without Supabase env vars, contest drafts are stored in ignored `.local/contest-drafts.json` and shown in `/admin/contests`.
+- With Supabase env vars, `/api/admin/contests` calls `create_admin_contest` so contest and problem assignments save transactionally.
+- Supabase contest drafts assign current published problem versions by problem slug and reject duplicate labels or duplicate problem assignments.
+
 AI drafting behavior:
 
 - `/admin/ai` generates structured problem drafts with statement, samples, package manifest, reference solution, validator sketch, generator sketch, hidden-test ideas, and review checklist.
