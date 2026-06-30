@@ -36,7 +36,8 @@
 
 ## Phase 5: Admin Problemsetting
 
-- [ ] Add problem package upload.
+- [x] Add problem package upload verification.
+- [ ] Store verified package artifacts for publish.
 - [x] Validate package manifest structure before draft save.
 - [x] Add immutable problem versions.
 - [x] Add built-in checker selection.

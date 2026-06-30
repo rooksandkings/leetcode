@@ -5,6 +5,13 @@ import { Save } from "lucide-react";
 import type { CheckerType, ProblemSummary } from "@codearena/shared";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+type VerifyState = "idle" | "verifying" | "passed" | "failed" | "error";
+
+type VerificationReport = {
+  ok: boolean;
+  errors: string[];
+  warnings: string[];
+};
 
 const defaultManifest = JSON.stringify(
   {
@@ -32,8 +39,34 @@ export function NewProblemForm() {
   const [tags, setTags] = useState("implementation, arrays");
   const [statement, setStatement] = useState("Write a complete ICPC-style statement before publishing this draft.");
   const [manifest, setManifest] = useState(defaultManifest);
+  const [packagePath, setPackagePath] = useState("problems/sum-array");
+  const [packageFile, setPackageFile] = useState<File | null>(null);
+  const [verifyState, setVerifyState] = useState<VerifyState>("idle");
+  const [verificationReport, setVerificationReport] = useState<VerificationReport | null>(null);
   const [state, setState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
+
+  async function verifyPackage() {
+    setVerifyState("verifying");
+    setVerificationReport(null);
+
+    const response = await fetch("/api/admin/problem-packages/verify", {
+      method: "POST",
+      body: packageFile ? packageFormData(packageFile) : JSON.stringify({ packagePath }),
+      headers: packageFile ? undefined : { "content-type": "application/json" },
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      setVerifyState("error");
+      setVerificationReport({ ok: false, errors: [payload.error ?? "Package verification failed"], warnings: [] });
+      return;
+    }
+
+    const payload = (await response.json()) as { report: VerificationReport };
+    setVerificationReport(payload.report);
+    setVerifyState(payload.report.ok ? "passed" : "failed");
+  }
 
   async function saveDraft() {
     setState("saving");
@@ -135,6 +168,66 @@ export function NewProblemForm() {
           <span>Package Manifest</span>
           <textarea name="manifest" className="code-block" value={manifest} onChange={(event) => setManifest(event.target.value)} />
         </label>
+        <section className="result-panel">
+          <div className="page-header">
+            <div>
+              <p className="eyebrow">Package Verification</p>
+              <h2>Verify Before Publish</h2>
+            </div>
+          </div>
+          <div className="form-grid">
+            <div className="grid two">
+              <label className="field">
+                <span>Local Package Path</span>
+                <input name="packagePath" value={packagePath} onChange={(event) => setPackagePath(event.target.value)} />
+              </label>
+              <label className="field">
+                <span>Package Zip</span>
+                <input
+                  accept=".zip"
+                  name="packageZip"
+                  type="file"
+                  onChange={(event) => setPackageFile(event.target.files?.[0] ?? null)}
+                />
+              </label>
+            </div>
+            <div className="actions">
+              <button className="secondary-button" disabled={verifyState === "verifying"} type="button" onClick={verifyPackage}>
+                {verifyState === "verifying" ? "Verifying" : "Verify Package"}
+              </button>
+              {verifyState === "passed" ? <span className="status accepted">verified</span> : null}
+              {verifyState === "failed" || verifyState === "error" ? <span className="status failed">failed</span> : null}
+            </div>
+            {verificationReport ? (
+              <div className="grid two">
+                <div>
+                  <h3>Errors</h3>
+                  {verificationReport.errors.length ? (
+                    <ul>
+                      {verificationReport.errors.map((error) => (
+                        <li key={error}>{error}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="subtle">None</p>
+                  )}
+                </div>
+                <div>
+                  <h3>Warnings</h3>
+                  {verificationReport.warnings.length ? (
+                    <ul>
+                      {verificationReport.warnings.map((warning) => (
+                        <li key={warning}>{warning}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="subtle">None</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </section>
         <div className="actions">
           <button className="primary-button" disabled={state === "saving"} type="button" onClick={saveDraft}>
             <Save size={16} />
@@ -147,3 +240,8 @@ export function NewProblemForm() {
   );
 }
 
+function packageFormData(file: File) {
+  const formData = new FormData();
+  formData.set("package", file);
+  return formData;
+}

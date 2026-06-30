@@ -54,6 +54,8 @@ create table public.problem_versions (
   checker_config jsonb not null default '{}'::jsonb,
   package_storage_path text,
   package_checksum text,
+  package_verification_report jsonb,
+  package_verified_at timestamptz,
   created_by uuid references public.profiles(id),
   published_at timestamptz,
   created_at timestamptz not null default now(),
