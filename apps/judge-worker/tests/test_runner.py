@@ -35,6 +35,15 @@ class RunnerTests(unittest.TestCase):
             result = JudgeRunner(fast_timeout_package).judge(submission)
         self.assertEqual(result.final_verdict, "time_limit_exceeded")
 
+    def test_output_limit(self) -> None:
+        package = ProblemPackage.load(Path("problems/sum-array"))
+        one_test_package = replace(package, tests=package.tests[:1])
+        with tempfile.TemporaryDirectory() as temp_dir_name:
+            submission = Path(temp_dir_name) / "ole.py"
+            submission.write_text("print('x' * 1000)\n", encoding="utf-8")
+            result = JudgeRunner(one_test_package, output_limit_bytes=32).judge(submission)
+        self.assertEqual(result.final_verdict, "output_limit_exceeded")
+
     def test_runtime_error(self) -> None:
         package = ProblemPackage.load(Path("problems/sum-array"))
         relaxed_package = replace(package, time_limit_ms=3000, tests=package.tests[:1])

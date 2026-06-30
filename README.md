@@ -204,6 +204,8 @@ Problem packages may include:
 
 The production worker entrypoint is `apps/judge-worker/worker.py`.
 
+The Fly worker image installs Bubblewrap and defaults `CODEARENA_SANDBOX_MODE=bubblewrap`, so submissions, custom checkers, validators, and generators run without network access, with read-only runtime/problem mounts, process-group cleanup on timeout, and Linux `rlimit` caps for CPU, address space, file size, and process count. Local development defaults to `auto`, which uses Bubblewrap on Linux when present and otherwise falls back to process-level controls.
+
 Required environment variables:
 
 ```text

@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-import subprocess
-import sys
 
 from .problem_package import ProblemPackage, ProblemPackageError
 from .runner import JudgeRunner
+from .sandbox import SandboxLimits, run_python_file
 
 
 @dataclass(frozen=True)
@@ -66,14 +65,19 @@ def _verify_validator(package: ProblemPackage) -> list[str]:
 
     errors: list[str] = []
     for test in package.tests:
-        completed = subprocess.run(
-            [sys.executable, "-I", str(validator_path), str(test.input_path)],
-            cwd=str(validator_path.parent),
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
+        completed = run_python_file(
+            validator_path,
+            args=[str(test.input_path)],
+            cwd=validator_path.parent,
+            limits=SandboxLimits(wall_time_ms=2000, memory_mb=128, output_limit_bytes=64_000, file_size_limit_bytes=128_000),
+            read_only_paths=[package.root],
         )
+        if completed.timed_out:
+            errors.append(f"Validator timed out on {test.name}")
+            continue
+        if completed.sandbox_error:
+            errors.append(f"Validator sandbox failed on {test.name}")
+            continue
         if completed.returncode != 0:
             details = _short_message(completed.stderr or completed.stdout)
             errors.append(f"Validator rejected {test.name}: {details or 'non-zero exit'}")
@@ -116,15 +120,23 @@ def _verify_generator(package: ProblemPackage) -> list[str]:
             errors.append(f"Generator case {index} input is missing: {input_rel}")
             continue
 
-        completed = subprocess.run(
-            [sys.executable, "-I", str(generator_path), str(seed)],
-            cwd=str(generator_path.parent),
-            capture_output=True,
-            text=True,
-            timeout=2,
-            check=False,
+        completed = run_python_file(
+            generator_path,
+            args=[str(seed)],
+            cwd=generator_path.parent,
+            limits=SandboxLimits(wall_time_ms=2000, memory_mb=128, output_limit_bytes=1_000_000, file_size_limit_bytes=1_000_000),
+            read_only_paths=[package.root],
         )
 
+        if completed.timed_out:
+            errors.append(f"Generator timed out for seed {seed}")
+            continue
+        if completed.sandbox_error:
+            errors.append(f"Generator sandbox failed for seed {seed}")
+            continue
+        if completed.output_limit_exceeded:
+            errors.append(f"Generator output exceeded limit for seed {seed}")
+            continue
         if completed.returncode != 0:
             details = _short_message(completed.stderr or completed.stdout)
             errors.append(f"Generator failed for seed {seed}: {details or 'non-zero exit'}")

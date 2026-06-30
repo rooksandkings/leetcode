@@ -1,16 +1,15 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
-import sys
+import signal
 import tempfile
-import time
 from dataclasses import dataclass
 from pathlib import Path
 
 from .checkers import run_checker
 from .problem_package import ProblemPackage, TestCase
 from .result import JudgeResult, TestResult, Verdict
+from .sandbox import SandboxLimits, SandboxResult, run_python_file
 
 
 @dataclass(frozen=True)
@@ -44,26 +43,35 @@ class JudgeRunner:
             run_path = temp_dir / "submission.py"
             shutil.copyfile(submission_path, run_path)
 
-            started = time.perf_counter()
-            try:
-                completed = subprocess.run(
-                    [sys.executable, "-I", "-S", str(run_path)],
-                    cwd=str(temp_dir),
-                    input=test_input,
-                    capture_output=True,
-                    text=True,
-                    timeout=self.problem.time_limit_ms / 1000,
-                    check=False,
-                )
-                runtime_ms = int((time.perf_counter() - started) * 1000)
-            except subprocess.TimeoutExpired:
-                runtime_ms = int((time.perf_counter() - started) * 1000)
-                return self._result(test_case, "time_limit_exceeded", runtime_ms, "Time limit exceeded")
+            completed = run_python_file(
+                run_path,
+                cwd=temp_dir,
+                stdin=test_input,
+                limits=SandboxLimits(
+                    wall_time_ms=self.problem.time_limit_ms,
+                    memory_mb=self.problem.memory_limit_mb,
+                    output_limit_bytes=self.output_limit_bytes,
+                    file_size_limit_bytes=max(self.output_limit_bytes * 2, 2_000_000),
+                ),
+                writable_paths=[temp_dir],
+            )
+            runtime_ms = completed.runtime_ms
+
+            if completed.timed_out:
+                return self._result(test_case, "time_limit_exceeded", runtime_ms, "Time limit exceeded", completed.memory_kb)
 
         stdout = completed.stdout
         stderr = completed.stderr
-        if len(stdout.encode("utf-8", errors="replace")) > self.output_limit_bytes:
-            return self._result(test_case, "output_limit_exceeded", runtime_ms, "Output limit exceeded")
+        if completed.sandbox_error:
+            message = _public_or_hidden_message(test_case, public="Judge sandbox error", hidden="Judge sandbox error")
+            return self._result(test_case, "judge_error", runtime_ms, message, completed.memory_kb)
+
+        if completed.output_limit_exceeded:
+            return self._result(test_case, "output_limit_exceeded", runtime_ms, "Output limit exceeded", completed.memory_kb)
+
+        if _memory_limit_exceeded(completed):
+            message = _public_or_hidden_message(test_case, public="Memory limit exceeded", hidden="Memory limit exceeded on hidden test")
+            return self._result(test_case, "memory_limit_exceeded", runtime_ms, message, completed.memory_kb)
 
         if completed.returncode != 0:
             message = _public_or_hidden_message(
@@ -71,7 +79,7 @@ class JudgeRunner:
                 public=f"Runtime error: {_excerpt(stderr) or f'exit code {completed.returncode}'}",
                 hidden="Runtime error on hidden test",
             )
-            return self._result(test_case, "runtime_error", runtime_ms, message)
+            return self._result(test_case, "runtime_error", runtime_ms, message, completed.memory_kb)
 
         checker_result = run_checker(
             self.problem.checker,
@@ -84,25 +92,25 @@ class JudgeRunner:
 
         if checker_result.checker_error:
             message = _public_or_hidden_message(test_case, public=checker_result.message, hidden="Checker error")
-            return self._result(test_case, "judge_error", runtime_ms, message)
+            return self._result(test_case, "judge_error", runtime_ms, message, completed.memory_kb)
 
         if checker_result.accepted:
-            return self._result(test_case, "accepted", runtime_ms, "Accepted")
+            return self._result(test_case, "accepted", runtime_ms, "Accepted", completed.memory_kb)
 
         message = _public_or_hidden_message(
             test_case,
             public=_wrong_answer_message(checker_result.message, expected, stdout),
             hidden="Wrong answer on hidden test",
         )
-        return self._result(test_case, "wrong_answer", runtime_ms, message)
+        return self._result(test_case, "wrong_answer", runtime_ms, message, completed.memory_kb)
 
-    def _result(self, test_case: TestCase, verdict: Verdict, runtime_ms: int, message: str) -> TestResult:
+    def _result(self, test_case: TestCase, verdict: Verdict, runtime_ms: int, message: str, memory_kb: int | None = None) -> TestResult:
         return TestResult(
             name=test_case.name,
             visibility="hidden" if test_case.hidden else "public",
             verdict=verdict,
             runtime_ms=runtime_ms,
-            memory_kb=None,
+            memory_kb=memory_kb,
             message=message,
         )
 
@@ -129,6 +137,13 @@ def _max_memory(results: list[TestResult]) -> int | None:
     return max(values) if values else None
 
 
+def _memory_limit_exceeded(result: SandboxResult) -> bool:
+    if "MemoryError" in result.stderr:
+        return True
+    sigkill = getattr(signal, "SIGKILL", None)
+    return sigkill is not None and result.returncode < 0 and -result.returncode == sigkill
+
+
 def _excerpt(value: str, limit: int = 240) -> str:
     collapsed = " ".join(value.strip().split())
     if len(collapsed) <= limit:
@@ -146,4 +161,3 @@ def _wrong_answer_message(reason: str, expected: str, actual: str) -> str:
         f"Expected excerpt: {_excerpt(expected)!r}. "
         f"Actual excerpt: {_excerpt(actual)!r}."
     )
-

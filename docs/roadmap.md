@@ -20,7 +20,7 @@
 - [x] Package the judge worker.
 - [x] Claim jobs from Supabase.
 - [x] Download problem packages.
-- [ ] Run submissions on Fly with Linux sandbox controls.
+- [x] Run submissions on Fly with Linux sandbox controls.
 - [x] Write final verdicts and redacted test results.
 
 ## Phase 4: Competition

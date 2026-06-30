@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import math
-import subprocess
-import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+from .sandbox import SandboxLimits, run_python_file
 
 
 @dataclass(frozen=True)
@@ -41,6 +41,7 @@ def run_checker(
         checker_path = problem_root / checker_config.get("path", "checkers/checker.py")
         return custom_checker(
             checker_path,
+            problem_root=problem_root,
             test_input=test_input,
             expected=expected,
             actual=actual,
@@ -99,6 +100,7 @@ def float_checker(expected: str, actual: str, *, abs_tol: float, rel_tol: float)
 def custom_checker(
     checker_path: Path,
     *,
+    problem_root: Path,
     test_input: str,
     expected: str,
     actual: str,
@@ -116,17 +118,29 @@ def custom_checker(
         expected_path.write_text(expected, encoding="utf-8")
         actual_path.write_text(actual, encoding="utf-8")
 
-        try:
-            completed = subprocess.run(
-                [sys.executable, "-I", str(checker_path), str(input_path), str(expected_path), str(actual_path)],
-                cwd=str(checker_path.parent),
-                capture_output=True,
-                text=True,
-                timeout=timeout_ms / 1000,
-                check=False,
-            )
-        except subprocess.TimeoutExpired:
+        completed = run_python_file(
+            checker_path,
+            args=[str(input_path), str(expected_path), str(actual_path)],
+            cwd=checker_path.parent,
+            limits=SandboxLimits(
+                wall_time_ms=timeout_ms,
+                memory_mb=128,
+                output_limit_bytes=64_000,
+                file_size_limit_bytes=128_000,
+                process_limit=16,
+            ),
+            read_only_paths=[problem_root],
+            writable_paths=[temp_dir],
+        )
+
+        if completed.timed_out:
             return CheckerResult(False, "Custom checker timed out", checker_error=True)
+        if completed.sandbox_error:
+            return CheckerResult(False, "Custom checker sandbox error", checker_error=True)
+        if completed.output_limit_exceeded:
+            return CheckerResult(False, "Custom checker output limit exceeded", checker_error=True)
+        if "MemoryError" in completed.stderr:
+            return CheckerResult(False, "Custom checker exceeded memory", checker_error=True)
 
     message = _short_message(completed.stderr or completed.stdout)
     if completed.returncode == 0:
@@ -152,4 +166,3 @@ def _short_message(value: str, limit: int = 300) -> str:
     if len(collapsed) <= limit:
         return collapsed
     return collapsed[: limit - 3] + "..."
-
