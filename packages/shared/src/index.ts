@@ -29,6 +29,8 @@ export type ContestSummary = {
   title: string;
   startsAt: string;
   endsAt: string;
+  standingsFrozenAt?: string;
+  standingsReleasedAt?: string;
   registeredCount: number;
 };
 

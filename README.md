@@ -96,6 +96,7 @@ Submission behavior:
 - Contest submissions use the server-resolved contest slug and locked contest problem version, not a client-supplied contest id.
 - Contest problem pages resolve statements from the locked contest version after start, matching the judged version.
 - Supabase standings include per-problem solved and wrong-attempt cells through `contest_standings.problem_results`.
+- Standings freeze at `standings_frozen_at` and hide later submissions until `standings_released_at`.
 - Future contest pages keep problem titles, links, and direct contest problem statements locked until `startsAt`.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
 - `/login` uses Supabase magic links when env vars are configured.

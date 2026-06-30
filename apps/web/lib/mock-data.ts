@@ -83,6 +83,8 @@ export const contests: ContestSummary[] = [
     title: "Summer Sprint 1",
     startsAt: "2026-07-05T18:00:00.000Z",
     endsAt: "2026-07-05T20:00:00.000Z",
+    standingsFrozenAt: "2026-07-05T19:30:00.000Z",
+    standingsReleasedAt: "2026-07-05T20:05:00.000Z",
     registeredCount: 64,
   },
   {
@@ -90,6 +92,8 @@ export const contests: ContestSummary[] = [
     title: "Python Open Beta",
     startsAt: "2026-07-12T17:00:00.000Z",
     endsAt: "2026-07-12T20:00:00.000Z",
+    standingsFrozenAt: "2026-07-12T19:30:00.000Z",
+    standingsReleasedAt: "2026-07-12T20:05:00.000Z",
     registeredCount: 112,
   },
 ];
@@ -167,4 +171,3 @@ export const contestEvents = [
   { handle: "bishop", problemLabel: "A", verdict: "accepted", minute: 21 },
   { handle: "bishop", problemLabel: "B", verdict: "accepted", minute: 54 },
 ] as const;
-

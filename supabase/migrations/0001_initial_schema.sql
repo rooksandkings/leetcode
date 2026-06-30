@@ -588,6 +588,13 @@ with registered as (
   select
     c.id as contest_id,
     c.starts_at,
+    case
+      when c.standings_frozen_at is not null
+        and now() >= c.standings_frozen_at
+        and now() < coalesce(c.standings_released_at, 'infinity'::timestamptz)
+      then c.standings_frozen_at
+      else null
+    end as visible_until,
     cr.user_id,
     cr.handle_snapshot as handle
   from public.contests c
@@ -608,8 +615,10 @@ first_accepts as (
     pl.label,
     min(s.submitted_at) as first_accepted_at
   from public.submissions s
+  join registered r on r.contest_id = s.contest_id and r.user_id = s.user_id
   join problem_labels pl on pl.contest_id = s.contest_id and pl.problem_version_id = s.problem_version_id
   where s.status = 'done' and s.verdict = 'accepted'
+    and (r.visible_until is null or s.submitted_at <= r.visible_until)
   group by s.contest_id, s.user_id, pl.label
 ),
 problem_scores as (
@@ -626,6 +635,7 @@ problem_scores as (
         and s.user_id = r.user_id
         and s.problem_version_id = pl.problem_version_id
         and s.status = 'done'
+        and (r.visible_until is null or s.submitted_at <= r.visible_until)
         and s.submitted_at < fa.first_accepted_at
         and s.verdict in (
           'wrong_answer',
@@ -643,6 +653,7 @@ problem_scores as (
         and s.user_id = r.user_id
         and s.problem_version_id = pl.problem_version_id
         and s.status = 'done'
+        and (r.visible_until is null or s.submitted_at <= r.visible_until)
         and (fa.first_accepted_at is null or s.submitted_at < fa.first_accepted_at)
         and s.verdict in (
           'wrong_answer',

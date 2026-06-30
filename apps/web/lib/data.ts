@@ -277,7 +277,7 @@ export async function listContests(): Promise<ContestSummary[]> {
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("contests")
-    .select("id,slug,title,starts_at,ends_at")
+    .select("id,slug,title,starts_at,ends_at,standings_frozen_at,standings_released_at")
     .eq("visibility", "public")
     .order("starts_at");
 
@@ -301,6 +301,8 @@ export async function listContests(): Promise<ContestSummary[]> {
     title: String(contest.title),
     startsAt: String(contest.starts_at),
     endsAt: String(contest.ends_at),
+    standingsFrozenAt: contest.standings_frozen_at ? String(contest.standings_frozen_at) : undefined,
+    standingsReleasedAt: contest.standings_released_at ? String(contest.standings_released_at) : undefined,
     registeredCount: countByContestId.get(String(contest.id)) ?? 0,
   }));
 }
@@ -374,15 +376,19 @@ export async function listContestProblems(contestSlug: string): Promise<ContestP
 
 export async function getStandings(contestSlug: string, labels: string[]): Promise<StandingRow[]> {
   if (!hasSupabaseEnv()) {
-    const localContestSubmissions = (await listLocalContestSubmissions(contestSlug)).filter((submission) =>
-      isLocalContestSubmissionScoreable(submission, contestSlug),
+    const contest = contests.find((candidate) => candidate.slug === contestSlug);
+    const visibleUntilMinute = localStandingsVisibleUntilMinute(contest);
+    const localContestSubmissions = (await listLocalContestSubmissions(contestSlug)).filter(
+      (submission) =>
+        isLocalContestSubmissionScoreable(submission, contestSlug) && isLocalSubmissionVisibleOnStandings(submission, contest, visibleUntilMinute),
     );
     const localRegisteredHandles = listLocalContestRegistrations(contestSlug).map((registration) => registration.handle);
+    const visibleContestEvents =
+      visibleUntilMinute == null ? contestEvents : contestEvents.filter((event) => event.minute <= visibleUntilMinute);
     if (!localContestSubmissions.length && !localRegisteredHandles.length) {
-      return deriveStandings(contestEvents, labels);
+      return deriveStandings(visibleContestEvents, labels);
     }
 
-    const contest = contests.find((candidate) => candidate.slug === contestSlug);
     const contestStartMs = contest ? new Date(contest.startsAt).getTime() : Date.now();
     const localEvents = localContestSubmissions.flatMap((submission) => {
       const problem = contestProblems.find((candidate) => candidate.slug === submission.problemSlug);
@@ -399,7 +405,7 @@ export async function getStandings(contestSlug: string, labels: string[]): Promi
       };
     });
 
-    return deriveStandings([...contestEvents, ...localEvents], labels, localRegisteredHandles);
+    return deriveStandings([...visibleContestEvents, ...localEvents], labels, localRegisteredHandles);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -577,6 +583,34 @@ function toProblemResults(value: unknown): StandingRow["problemResults"] {
   }
 
   return results;
+}
+
+function localStandingsVisibleUntilMinute(contest: ContestSummary | undefined) {
+  if (!contest?.standingsFrozenAt) {
+    return null;
+  }
+
+  const now = Date.now();
+  const frozenAt = new Date(contest.standingsFrozenAt).getTime();
+  const releasedAt = contest.standingsReleasedAt ? new Date(contest.standingsReleasedAt).getTime() : Number.POSITIVE_INFINITY;
+  if (now < frozenAt || now >= releasedAt) {
+    return null;
+  }
+
+  return Math.max(0, Math.floor((frozenAt - new Date(contest.startsAt).getTime()) / 60000));
+}
+
+function isLocalSubmissionVisibleOnStandings(
+  submission: LocalSubmissionRecord,
+  contest: ContestSummary | undefined,
+  visibleUntilMinute: number | null,
+) {
+  if (!contest || visibleUntilMinute == null) {
+    return true;
+  }
+
+  const minute = Math.floor((new Date(submission.submittedAt).getTime() - new Date(contest.startsAt).getTime()) / 60000);
+  return minute <= visibleUntilMinute;
 }
 
 async function problemTitlesByVersionIds(versionIds: unknown[]) {
