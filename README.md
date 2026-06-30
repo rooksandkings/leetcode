@@ -48,6 +48,12 @@ Run the seeded problem against a known accepted solution:
 python apps/judge-worker/cli.py judge --problem problems/sum-array --submission examples/submissions/sum_array_ac.py
 ```
 
+Build the zipped artifact expected by the Fly worker:
+
+```powershell
+python apps/judge-worker/cli.py pack --problem problems/sum-array --out C:\tmp\sum-array.zip
+```
+
 Run judge unit tests:
 
 ```powershell

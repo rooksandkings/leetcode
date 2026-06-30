@@ -9,6 +9,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
 from codearena_judge.problem_package import ProblemPackage, ProblemPackageError
+from codearena_judge.packager import package_problem
 from codearena_judge.runner import JudgeRunner
 from codearena_judge.verifier import verify_problem
 
@@ -30,6 +31,10 @@ def main() -> int:
     judge_parser.add_argument("--problem", required=True, type=Path)
     judge_parser.add_argument("--submission", required=True, type=Path)
 
+    pack_parser = subparsers.add_parser("pack", help="Verify and zip a problem package")
+    pack_parser.add_argument("--problem", required=True, type=Path)
+    pack_parser.add_argument("--out", required=True, type=Path)
+
     args = parser.parse_args()
 
     try:
@@ -43,6 +48,11 @@ def main() -> int:
             result = JudgeRunner(package).judge(args.submission)
             print(json.dumps(result.to_json(), indent=2, default=_json_default))
             return 0 if result.final_verdict == "accepted" else 1
+
+        if args.command == "pack":
+            report = package_problem(args.problem, args.out)
+            print(json.dumps(report.to_json(), indent=2))
+            return 0
     except ProblemPackageError as exc:
         print(f"Problem package error: {exc}", file=sys.stderr)
         return 2
@@ -52,4 +62,3 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
