@@ -104,6 +104,7 @@ create table public.contest_problems (
 create table public.contest_registrations (
   contest_id uuid not null references public.contests(id) on delete cascade,
   user_id uuid not null references public.profiles(id) on delete cascade,
+  handle_snapshot citext not null,
   registered_at timestamptz not null default now(),
   primary key (contest_id, user_id)
 );
@@ -447,10 +448,9 @@ with registered as (
     c.id as contest_id,
     c.starts_at,
     cr.user_id,
-    p.handle
+    cr.handle_snapshot as handle
   from public.contests c
   join public.contest_registrations cr on cr.contest_id = c.id
-  join public.profiles p on p.id = cr.user_id
   where c.visibility = 'public'
 ),
 problem_labels as (
@@ -650,6 +650,7 @@ for select using (true);
 create policy "users register themselves" on public.contest_registrations
 for insert with check (
   auth.uid() = user_id
+  and handle_snapshot = (select p.handle from public.profiles p where p.id = auth.uid())
   and exists (
     select 1 from public.contests c
     where c.id = contest_id

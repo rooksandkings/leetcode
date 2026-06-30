@@ -94,6 +94,16 @@ export async function POST(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: "Authentication required" }, { status: 401 });
   }
 
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("handle")
+    .eq("id", user.id)
+    .single();
+
+  if (profileError || !profile?.handle) {
+    return NextResponse.json({ error: "Profile is required before registration" }, { status: 400 });
+  }
+
   const contest = await findContestId(supabase, slug);
   if (!contest) {
     return NextResponse.json({ error: "Contest not found" }, { status: 404 });
@@ -103,6 +113,7 @@ export async function POST(_request: Request, context: RouteContext) {
     {
       contest_id: contest.id,
       user_id: user.id,
+      handle_snapshot: String(profile.handle),
     },
     { ignoreDuplicates: true, onConflict: "contest_id,user_id" },
   );

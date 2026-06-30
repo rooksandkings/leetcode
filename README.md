@@ -107,6 +107,7 @@ Contest registration behavior:
 - With Supabase env vars, `/api/contests/[slug]/registration` writes to `contest_registrations` through Supabase RLS.
 - Contest cards and contest headers show the current registered count from local storage or Supabase.
 - Registration closes at contest start; leaving after start or after submitting is blocked by the Supabase policy.
+- Supabase registrations snapshot the participant handle so historical standings do not change after profile edits.
 
 Data behavior:
 
