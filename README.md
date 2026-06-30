@@ -95,6 +95,7 @@ Submission behavior:
 - Local contest submissions require registration, a valid contest problem, and an active contest window before they can affect standings.
 - Contest submissions use the server-resolved contest slug and locked contest problem version, not a client-supplied contest id.
 - Supabase standings include per-problem solved and wrong-attempt cells through `contest_standings.problem_results`.
+- Future contest pages keep problem titles, links, and direct contest problem statements locked until `startsAt`.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.

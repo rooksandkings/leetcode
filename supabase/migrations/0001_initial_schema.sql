@@ -633,7 +633,9 @@ create policy "public contest problems are readable" on public.contest_problems
 for select using (
   exists (
     select 1 from public.contests c
-    where c.id = contest_id and c.visibility in ('public', 'unlisted')
+    where c.id = contest_id
+      and c.visibility in ('public', 'unlisted')
+      and now() >= c.starts_at
   )
   or public.is_admin()
 );

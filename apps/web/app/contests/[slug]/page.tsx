@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, ListChecks } from "lucide-react";
+import { ArrowRight, ListChecks, Lock } from "lucide-react";
 import { ContestRegistrationPanel } from "@/components/contest-registration-panel";
 import { getContest, listContestProblems } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -11,11 +11,15 @@ type PageProps = {
 
 export default async function ContestPage({ params }: PageProps) {
   const { slug } = await params;
-  const [contest, contestProblems] = await Promise.all([getContest(slug), listContestProblems(slug)]);
+  const contest = await getContest(slug);
 
   if (!contest) {
     notFound();
   }
+
+  const hasStarted = new Date() >= new Date(contest.startsAt);
+  const contestProblems = hasStarted ? await listContestProblems(slug) : [];
+  const lockedProblemLabels = ["A", "B", "C"];
 
   return (
     <main className="page">
@@ -37,19 +41,31 @@ export default async function ContestPage({ params }: PageProps) {
       </section>
 
       <section className="grid">
-        {contestProblems.map((problem) => (
-          <Link className="card" href={`/problems/${problem.slug}?contest=${contest.slug}`} key={problem.label}>
-            <div className="page-header">
-              <div>
-                <p className="eyebrow">Problem {problem.label}</p>
-                <h2>{problem.title}</h2>
+        {hasStarted
+          ? contestProblems.map((problem) => (
+              <Link className="card" href={`/problems/${problem.slug}?contest=${contest.slug}`} key={problem.label}>
+                <div className="page-header">
+                  <div>
+                    <p className="eyebrow">Problem {problem.label}</p>
+                    <h2>{problem.title}</h2>
+                  </div>
+                  <ArrowRight size={18} />
+                </div>
+              </Link>
+            ))
+          : lockedProblemLabels.map((label) => (
+              <div className="card" key={label}>
+                <div className="page-header">
+                  <div>
+                    <p className="eyebrow">Problem {label}</p>
+                    <h2>Locked</h2>
+                    <p className="subtle">Available {formatDateTime(contest.startsAt)}</p>
+                  </div>
+                  <Lock size={18} />
+                </div>
               </div>
-              <ArrowRight size={18} />
-            </div>
-          </Link>
-        ))}
+            ))}
       </section>
     </main>
   );
 }
-

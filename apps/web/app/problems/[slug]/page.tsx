@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SubmissionPanel } from "@/components/submission-panel";
-import { getProblem } from "@/lib/data";
+import { getContest, getProblem } from "@/lib/data";
+import { formatDateTime } from "@/lib/format";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -10,6 +11,26 @@ type PageProps = {
 export default async function ProblemPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const { contest } = await searchParams;
+  const contestContext = contest ? await getContest(contest) : undefined;
+
+  if (contest && !contestContext) {
+    notFound();
+  }
+
+  if (contestContext && new Date() < new Date(contestContext.startsAt)) {
+    return (
+      <main className="page">
+        <section className="page-header">
+          <div>
+            <p className="eyebrow">Contest Problem</p>
+            <h1>Locked</h1>
+            <p className="subtle">Available {formatDateTime(contestContext.startsAt)}</p>
+          </div>
+        </section>
+      </main>
+    );
+  }
+
   const problem = await getProblem(slug);
 
   if (!problem) {
