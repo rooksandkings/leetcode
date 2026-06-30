@@ -97,8 +97,10 @@ Submission behavior:
 - Contest problem pages resolve statements from the locked contest version after start, matching the judged version.
 - Supabase standings include per-problem solved and wrong-attempt cells through `contest_standings.problem_results`.
 - Standings freeze at `standings_frozen_at` and hide later submissions until `standings_released_at`.
+- Supabase live contest pages refresh through non-sensitive `contest_live_events` Realtime triggers when registrations, assignments, or contest submissions change.
 - Future contest pages keep problem titles, links, and direct contest problem statements locked until `startsAt`.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
+- With Supabase env vars, submission detail pages subscribe to their own submission and visible test-result rows so queued submissions update after worker finalization.
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.
 
@@ -155,6 +157,7 @@ It includes:
 - Immutable problem versions
 - Public/hidden test metadata
 - Contest registration and ICPC standings view
+- Public contest live events for coarse Realtime refreshes
 - Submission and per-test result tables
 - Judge job leasing/finalization RPCs for service-role workers
 - RLS policies that keep hidden tests and judge jobs off the client

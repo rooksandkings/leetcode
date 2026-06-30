@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, Trophy } from "lucide-react";
 import { ProblemTable } from "@/components/problem-table";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { StatusPill } from "@/components/status-pill";
 import { listContests, listProblems, listRecentSubmissions } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -13,6 +14,10 @@ export default async function DashboardPage() {
 
   return (
     <main className="page">
+      <RealtimeRefresh
+        scope="dashboard"
+        subscriptions={[{ table: "submissions" }, { table: "contest_live_events" }]}
+      />
       <section className="page-header">
         <div>
           <p className="eyebrow">Competition Console</p>

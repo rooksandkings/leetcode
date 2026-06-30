@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { StatusPill } from "@/components/status-pill";
 import { TestResults } from "@/components/test-results";
 import { getSubmissionDetail } from "@/lib/data";
@@ -18,6 +19,13 @@ export default async function SubmissionPage({ params }: PageProps) {
 
   return (
     <main className="page">
+      <RealtimeRefresh
+        scope={`submission:${submission.id}`}
+        subscriptions={[
+          { table: "submissions", filter: `id=eq.${submission.id}` },
+          { table: "submission_test_results", filter: `submission_id=eq.${submission.id}` },
+        ]}
+      />
       <section className="page-header">
         <div>
           <p className="eyebrow">Submission</p>

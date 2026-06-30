@@ -212,6 +212,14 @@ create table public.custom_checker_reviews (
   check (status <> 'rejected' or length(trim(notes)) > 0)
 );
 
+create table public.contest_live_events (
+  contest_id uuid primary key references public.contests(id) on delete cascade,
+  contest_slug text not null,
+  updated_at timestamptz not null default now()
+);
+
+create index contest_live_events_slug_idx on public.contest_live_events (contest_slug);
+
 insert into storage.buckets (
   id,
   name,
@@ -311,6 +319,84 @@ $$;
 create trigger submissions_enqueue_judge_job
 after insert on public.submissions
 for each row execute function public.enqueue_judge_job();
+
+create or replace function public.touch_contest_live_event(p_contest_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if p_contest_id is null then
+    return;
+  end if;
+
+  insert into public.contest_live_events (contest_id, contest_slug, updated_at)
+  select c.id, c.slug::text, now()
+  from public.contests c
+  where c.id = p_contest_id
+  on conflict (contest_id) do update
+  set contest_slug = excluded.contest_slug,
+      updated_at = excluded.updated_at;
+end;
+$$;
+
+create or replace function public.touch_contest_live_event_from_contest()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.touch_contest_live_event(new.id);
+  return new;
+end;
+$$;
+
+create or replace function public.touch_contest_live_event_from_child()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_contest_id uuid;
+begin
+  if tg_op = 'DELETE' then
+    v_contest_id := old.contest_id;
+  else
+    v_contest_id := new.contest_id;
+  end if;
+
+  perform public.touch_contest_live_event(v_contest_id);
+
+  if tg_op = 'UPDATE' and old.contest_id is distinct from new.contest_id then
+    perform public.touch_contest_live_event(old.contest_id);
+  end if;
+
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+
+  return new;
+end;
+$$;
+
+create trigger contests_touch_live_event
+after insert or update on public.contests
+for each row execute function public.touch_contest_live_event_from_contest();
+
+create trigger contest_problems_touch_live_event
+after insert or update or delete on public.contest_problems
+for each row execute function public.touch_contest_live_event_from_child();
+
+create trigger contest_registrations_touch_live_event
+after insert or update or delete on public.contest_registrations
+for each row execute function public.touch_contest_live_event_from_child();
+
+create trigger submissions_touch_contest_live_event
+after insert or update or delete on public.submissions
+for each row execute function public.touch_contest_live_event_from_child();
 
 create or replace function public.prevent_published_problem_version_update()
 returns trigger
@@ -781,6 +867,7 @@ alter table public.judge_jobs enable row level security;
 alter table public.ai_generations enable row level security;
 alter table public.admin_audit_logs enable row level security;
 alter table public.custom_checker_reviews enable row level security;
+alter table public.contest_live_events enable row level security;
 
 create policy "profiles are publicly readable" on public.profiles
 for select using (true);
@@ -890,14 +977,46 @@ create policy "admins manage custom checker reviews" on public.custom_checker_re
 for all using (public.is_admin())
 with check (public.is_admin());
 
+create policy "contest live events are publicly readable" on public.contest_live_events
+for select using (true);
+
 create policy "admins manage problem package artifacts" on storage.objects
 for all using (bucket_id = 'problem-packages' and public.is_admin())
 with check (bucket_id = 'problem-packages' and public.is_admin());
+
+do $$
+declare
+  v_table text;
+  v_tables text[] := array[
+    'contest_live_events',
+    'submissions',
+    'submission_test_results'
+  ];
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
+    foreach v_table in array v_tables
+    loop
+      if not exists (
+        select 1
+        from pg_publication_tables
+        where pubname = 'supabase_realtime'
+          and schemaname = 'public'
+          and tablename = v_table
+      ) then
+        execute format('alter publication supabase_realtime add table public.%I', v_table);
+      end if;
+    end loop;
+  end if;
+end;
+$$;
 
 revoke all on function public.submit_solution(uuid, uuid, text) from public, anon, authenticated;
 revoke all on function public.create_admin_contest(text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, jsonb) from public, anon, authenticated;
 revoke all on function public.lease_judge_job(text, integer) from public, anon, authenticated;
 revoke all on function public.finalize_submission(uuid, public.verdict, integer, integer, jsonb) from public, anon, authenticated;
+revoke all on function public.touch_contest_live_event(uuid) from public, anon, authenticated;
+revoke all on function public.touch_contest_live_event_from_contest() from public, anon, authenticated;
+revoke all on function public.touch_contest_live_event_from_child() from public, anon, authenticated;
 grant execute on function public.submit_solution(uuid, uuid, text) to authenticated;
 grant execute on function public.create_admin_contest(text, text, text, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, timestamptz, jsonb) to authenticated;
 grant execute on function public.lease_judge_job(text, integer) to service_role;

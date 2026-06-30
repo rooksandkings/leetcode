@@ -13,7 +13,7 @@
 - [x] Create auth-backed profiles.
 - [x] Persist problems, contests, submissions, test results, and jobs.
 - [x] Add app route for submission creation.
-- [ ] Add coarse Realtime updates.
+- [x] Add coarse Realtime updates.
 
 ## Phase 3: Fly Worker
 

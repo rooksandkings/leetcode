@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ListChecks, Lock } from "lucide-react";
 import { ContestRegistrationPanel } from "@/components/contest-registration-panel";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { getContest, listContestProblems } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
@@ -23,6 +24,10 @@ export default async function ContestPage({ params }: PageProps) {
 
   return (
     <main className="page">
+      <RealtimeRefresh
+        scope={`contest:${contest.slug}`}
+        subscriptions={[{ table: "contest_live_events", filter: `contest_slug=eq.${contest.slug}` }]}
+      />
       <section className="page-header">
         <div>
           <p className="eyebrow">Contest</p>

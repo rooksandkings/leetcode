@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { RealtimeRefresh } from "@/components/realtime-refresh";
 import { StandingsTable } from "@/components/standings-table";
 import { getContest, getStandings, listContestProblems } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
@@ -21,6 +22,10 @@ export default async function StandingsPage({ params }: PageProps) {
 
   return (
     <main className="page">
+      <RealtimeRefresh
+        scope={`standings:${contest.slug}`}
+        subscriptions={[{ table: "contest_live_events", filter: `contest_slug=eq.${contest.slug}` }]}
+      />
       <section className="page-header">
         <div>
           <p className="eyebrow">ICPC Standings</p>
