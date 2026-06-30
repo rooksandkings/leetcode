@@ -283,7 +283,7 @@ export async function getStandings(contestSlug: string, labels: string[]): Promi
 
   const { data, error } = await supabase
     .from("contest_standings")
-    .select("rank,handle,solved_count,penalty_minutes,last_accepted_at")
+    .select("rank,handle,solved_count,penalty_minutes,last_accepted_minute,problem_results")
     .eq("contest_id", contest.id)
     .order("rank");
 
@@ -296,8 +296,8 @@ export async function getStandings(contestSlug: string, labels: string[]): Promi
     handle: String(row.handle),
     solved: Number(row.solved_count),
     penaltyMinutes: Number(row.penalty_minutes),
-    lastAcceptedMinute: row.last_accepted_at ? 0 : null,
-    problemResults: {},
+    lastAcceptedMinute: row.last_accepted_minute == null ? null : Number(row.last_accepted_minute),
+    problemResults: toProblemResults(row.problem_results),
   }));
 }
 
@@ -422,6 +422,28 @@ function toVerdict(value: unknown): SubmissionSummary["verdict"] {
     value === "judge_error"
     ? value
     : "judge_error";
+}
+
+function toProblemResults(value: unknown): StandingRow["problemResults"] {
+  const results: StandingRow["problemResults"] = {};
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return results;
+  }
+
+  for (const [label, rawResult] of Object.entries(value as Record<string, unknown>)) {
+    if (!rawResult || typeof rawResult !== "object" || Array.isArray(rawResult)) {
+      continue;
+    }
+
+    const result = rawResult as Record<string, unknown>;
+    results[label] = {
+      solved: Boolean(result.solved),
+      attemptsBeforeSolve: Number(result.attemptsBeforeSolve ?? 0),
+      penaltyMinutes: Number(result.penaltyMinutes ?? 0),
+    };
+  }
+
+  return results;
 }
 
 async function problemTitlesByVersionIds(versionIds: unknown[]) {

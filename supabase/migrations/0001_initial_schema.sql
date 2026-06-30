@@ -468,7 +468,7 @@ first_accepts as (
     min(s.submitted_at) as first_accepted_at
   from public.submissions s
   join problem_labels pl on pl.contest_id = s.contest_id and pl.problem_version_id = s.problem_version_id
-  where s.verdict = 'accepted'
+  where s.status = 'done' and s.verdict = 'accepted'
   group by s.contest_id, s.user_id, pl.label
 ),
 problem_scores as (
@@ -494,7 +494,24 @@ problem_scores as (
           'compilation_error',
           'output_limit_exceeded'
         )
-    ) as wrong_before_accept
+    ) as wrong_before_accept,
+    (
+      select count(*)::integer
+      from public.submissions s
+      where s.contest_id = r.contest_id
+        and s.user_id = r.user_id
+        and s.problem_version_id = pl.problem_version_id
+        and s.status = 'done'
+        and (fa.first_accepted_at is null or s.submitted_at < fa.first_accepted_at)
+        and s.verdict in (
+          'wrong_answer',
+          'time_limit_exceeded',
+          'memory_limit_exceeded',
+          'runtime_error',
+          'compilation_error',
+          'output_limit_exceeded'
+        )
+    ) as wrong_attempts
   from registered r
   join problem_labels pl on pl.contest_id = r.contest_id
   left join first_accepts fa on fa.contest_id = r.contest_id and fa.user_id = r.user_id and fa.label = pl.label
@@ -504,6 +521,7 @@ user_scores as (
     ps.contest_id,
     ps.user_id,
     ps.handle,
+    r.starts_at,
     count(*) filter (where ps.first_accepted_at is not null)::integer as solved_count,
     coalesce(sum(
       case
@@ -514,7 +532,7 @@ user_scores as (
     max(ps.first_accepted_at) as last_accepted_at
   from problem_scores ps
   join registered r on r.contest_id = ps.contest_id and r.user_id = ps.user_id
-  group by ps.contest_id, ps.user_id, ps.handle
+  group by ps.contest_id, ps.user_id, ps.handle, r.starts_at
 )
 select
   rank() over (
@@ -526,7 +544,37 @@ select
   handle,
   solved_count,
   penalty_minutes,
-  last_accepted_at
+  last_accepted_at,
+  case
+    when last_accepted_at is null then null
+    else floor(extract(epoch from (last_accepted_at - starts_at)) / 60)::integer
+  end as last_accepted_minute,
+  coalesce(
+    (
+      select jsonb_object_agg(
+        ps.label,
+        jsonb_build_object(
+          'solved',
+          ps.first_accepted_at is not null,
+          'attemptsBeforeSolve',
+          case
+            when ps.first_accepted_at is not null then ps.wrong_before_accept
+            else ps.wrong_attempts
+          end,
+          'penaltyMinutes',
+          case
+            when ps.first_accepted_at is null then 0
+            else floor(extract(epoch from (ps.first_accepted_at - user_scores.starts_at)) / 60)::integer + ps.wrong_before_accept * 20
+          end
+        )
+      )
+      from problem_scores ps
+      where ps.contest_id = user_scores.contest_id
+        and ps.user_id = user_scores.user_id
+        and (ps.first_accepted_at is not null or ps.wrong_attempts > 0)
+    ),
+    '{}'::jsonb
+  ) as problem_results
 from user_scores;
 
 alter table public.profiles enable row level security;
