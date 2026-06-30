@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { isLocalJudgeAllowed, judgeLocalSubmission } from "@/lib/local-judge";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
+
+export const runtime = "nodejs";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as {
@@ -55,12 +58,27 @@ export async function POST(request: Request) {
     );
   }
 
-  return NextResponse.json(
-    {
-      id: `local_${Date.now()}`,
-      status: "queued",
-      problemSlug: body.problemSlug,
-    },
-    { status: 201 },
-  );
+  if (!isLocalJudgeAllowed()) {
+    return NextResponse.json({ error: "Local judge is disabled" }, { status: 503 });
+  }
+
+  try {
+    const result = await judgeLocalSubmission(body.problemSlug, body.sourceCode);
+    return NextResponse.json(
+      {
+        id: `local_${Date.now()}`,
+        status: "done",
+        problemSlug: body.problemSlug,
+        ...result,
+      },
+      { status: 201 },
+    );
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: error instanceof Error ? error.message : "Local judge failed",
+      },
+      { status: 500 },
+    );
+  }
 }

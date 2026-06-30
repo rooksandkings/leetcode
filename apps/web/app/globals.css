@@ -394,6 +394,13 @@ tr:last-child td {
   padding: 0 14px 14px;
 }
 
+.result-panel {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfa;
+  padding: 14px;
+}
+
 .problem-score {
   display: grid;
   min-width: 72px;
@@ -427,4 +434,3 @@ tr:last-child td {
     grid-template-columns: 1fr;
   }
 }
-
