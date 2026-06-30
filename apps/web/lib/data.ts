@@ -1,7 +1,9 @@
 import type { ContestSummary, ProblemSummary, StandingRow, SubmissionSummary } from "@codearena/shared";
+import type { AdminProblemRow } from "@/components/admin-problem-table";
 import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
 import { deriveStandings } from "@/lib/icpc";
+import { listLocalProblemDrafts } from "@/lib/local-problem-drafts";
 import { getLocalSubmission, listLocalContestSubmissions, listLocalSubmissionSummaries } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
@@ -40,6 +42,47 @@ export async function listProblems(): Promise<ProblemSummary[]> {
     tags: Array.isArray(problem.tags) ? problem.tags.map(String) : [],
     acceptedCount: 0,
     submissionCount: 0,
+  }));
+}
+
+export async function listAdminProblems(): Promise<AdminProblemRow[]> {
+  if (!hasSupabaseEnv()) {
+    const publishedRows: AdminProblemRow[] = problems.map((problem) => ({
+      ...problem,
+      status: "published",
+    }));
+    const draftRows: AdminProblemRow[] = listLocalProblemDrafts().map((draft) => ({
+      slug: draft.slug,
+      title: draft.title,
+      difficulty: draft.difficulty,
+      tags: draft.tags,
+      acceptedCount: 0,
+      submissionCount: 0,
+      status: "draft",
+      updatedAt: draft.updatedAt,
+    }));
+    return [...draftRows, ...publishedRows];
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("problems")
+    .select("slug,title,difficulty,tags,visibility,updated_at")
+    .order("updated_at", { ascending: false });
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data.map((problem) => ({
+    slug: String(problem.slug),
+    title: String(problem.title),
+    difficulty: toDifficulty(problem.difficulty),
+    tags: Array.isArray(problem.tags) ? problem.tags.map(String) : [],
+    acceptedCount: 0,
+    submissionCount: 0,
+    status: problem.visibility === "draft" ? "draft" : "published",
+    updatedAt: String(problem.updated_at ?? ""),
   }));
 }
 

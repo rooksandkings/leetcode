@@ -100,6 +100,12 @@ Data behavior:
 - Without Supabase env vars, the app reads seed data from `apps/web/lib/mock-data.ts`.
 - With Supabase env vars, public problem, contest, contest-problem, and standings pages read from Supabase through `apps/web/lib/data.ts`.
 
+Admin problem creation:
+
+- `/admin/problems/new` saves draft problem metadata and validates that the package manifest is JSON with matching `checker.type` and a `tests` array.
+- Without Supabase env vars, drafts are stored in ignored `.local/problem-drafts.json` and shown in `/admin/problems`.
+- With Supabase env vars, `/api/admin/problems` inserts draft `problems` and `problem_versions` rows through Supabase RLS.
+
 AI drafting behavior:
 
 - `/admin/ai` generates structured problem drafts with statement, samples, package manifest, reference solution, validator sketch, generator sketch, hidden-test ideas, and review checklist.

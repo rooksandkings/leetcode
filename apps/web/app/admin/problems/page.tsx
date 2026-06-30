@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { FilePlus2, Wand2 } from "lucide-react";
-import { ProblemTable } from "@/components/problem-table";
-import { listProblems } from "@/lib/data";
+import { AdminProblemTable } from "@/components/admin-problem-table";
+import { listAdminProblems } from "@/lib/data";
 
 export default async function AdminProblemsPage() {
-  const problems = await listProblems();
+  const problems = await listAdminProblems();
 
   return (
     <main className="page">
@@ -24,7 +24,7 @@ export default async function AdminProblemsPage() {
           </Link>
         </div>
       </section>
-      <ProblemTable problems={problems} />
+      <AdminProblemTable problems={problems} />
     </main>
   );
 }
