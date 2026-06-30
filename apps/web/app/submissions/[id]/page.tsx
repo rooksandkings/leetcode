@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
-import { TestResults } from "@/components/test-results";
 import { StatusPill } from "@/components/status-pill";
-import { submissionTests, submissions } from "@/lib/mock-data";
+import { TestResults } from "@/components/test-results";
+import { getSubmissionDetail } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
 type PageProps = {
@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function SubmissionPage({ params }: PageProps) {
   const { id } = await params;
-  const submission = submissions.find((candidate) => candidate.id === id);
+  const submission = await getSubmissionDetail(id);
 
   if (!submission) {
     notFound();
@@ -23,7 +23,7 @@ export default async function SubmissionPage({ params }: PageProps) {
           <p className="eyebrow">Submission</p>
           <h1>{submission.id}</h1>
           <p className="subtle">
-            {submission.problemTitle} · {submission.language} · {formatDateTime(submission.submittedAt)}
+            {submission.problemTitle} - {submission.language} - {formatDateTime(submission.submittedAt)}
           </p>
         </div>
         <StatusPill verdict={submission.verdict} />
@@ -32,10 +32,17 @@ export default async function SubmissionPage({ params }: PageProps) {
         <div className="panel">
           <h2>Result</h2>
           <p className="subtle">
-            Runtime {submission.runtimeMs ?? 0} ms · Memory recorded by production sandbox
+            Runtime {submission.runtimeMs ?? 0} ms
+            {submission.memoryKb ? ` - Memory ${submission.memoryKb} KB` : " - Memory recorded by production sandbox"}
           </p>
         </div>
-        <TestResults tests={submissionTests} />
+        {submission.sourceCode ? (
+          <div className="panel">
+            <h2>Source</h2>
+            <pre className="code-block">{submission.sourceCode}</pre>
+          </div>
+        ) : null}
+        {submission.tests.length ? <TestResults tests={submission.tests} /> : null}
       </section>
     </main>
   );

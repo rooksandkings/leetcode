@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Play, RotateCcw } from "lucide-react";
 import type { TestResult, Verdict } from "@codearena/shared";
 import { StatusPill } from "@/components/status-pill";
@@ -103,6 +104,11 @@ export function SubmissionPanel({ problemSlug }: { problemSlug: string }) {
             {state === "submitting" ? "Submitting" : "Submit"}
           </button>
           {message ? <span className="subtle">{message}</span> : null}
+          {result?.id ? (
+            <Link className="secondary-button" href={`/submissions/${result.id}`}>
+              View
+            </Link>
+          ) : null}
         </div>
         {result?.verdict ? (
           <div className="result-panel">

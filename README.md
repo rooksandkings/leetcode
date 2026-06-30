@@ -89,6 +89,7 @@ The app is under `apps/web` and defaults to `http://localhost:3000`.
 Submission behavior:
 
 - Without Supabase env vars, `/api/submissions` runs the local Python judge in development and returns a real final verdict with redacted per-test results.
+- Local judged submissions are stored in ignored `.local/submissions.json`, so `/submissions/[id]` and the dashboard recent-submissions list work during development.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.

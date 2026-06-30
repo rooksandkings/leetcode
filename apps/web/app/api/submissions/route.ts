@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { isLocalJudgeAllowed, judgeLocalSubmission } from "@/lib/local-judge";
+import { problemTitleForSlug, recordLocalSubmission } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
@@ -64,9 +65,23 @@ export async function POST(request: Request) {
 
   try {
     const result = await judgeLocalSubmission(body.problemSlug, body.sourceCode);
+    const id = `local_${Date.now()}`;
+    await recordLocalSubmission({
+      id,
+      problemSlug: body.problemSlug,
+      problemTitle: problemTitleForSlug(body.problemSlug),
+      language: "python3",
+      sourceCode: body.sourceCode,
+      verdict: result.verdict,
+      runtimeMs: result.runtimeMs,
+      memoryKb: result.memoryKb,
+      submittedAt: new Date().toISOString(),
+      tests: result.tests,
+    });
+
     return NextResponse.json(
       {
-        id: `local_${Date.now()}`,
+        id,
         status: "done",
         problemSlug: body.problemSlug,
         ...result,

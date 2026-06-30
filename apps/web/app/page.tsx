@@ -6,8 +6,7 @@ import { listContests, listProblems, listRecentSubmissions } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
 export default async function DashboardPage() {
-  const [problems, contests] = await Promise.all([listProblems(), listContests()]);
-  const submissions = listRecentSubmissions();
+  const [problems, contests, submissions] = await Promise.all([listProblems(), listContests(), listRecentSubmissions()]);
   const accepted = submissions.filter((submission) => submission.verdict === "accepted").length;
   const nextContest = contests[0];
   const firstProblem = problems[0];

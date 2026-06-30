@@ -1,12 +1,19 @@
 import type { ContestSummary, ProblemSummary, StandingRow, SubmissionSummary } from "@codearena/shared";
+import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
 import { deriveStandings } from "@/lib/icpc";
+import { getLocalSubmission, listLocalSubmissionSummaries } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 type ContestProblem = {
   label: string;
   slug: string;
   title: string;
+};
+
+export type SubmissionDetail = SubmissionSummary & {
+  sourceCode?: string;
+  tests: LocalSubmissionRecord["tests"];
 };
 
 export async function listProblems(): Promise<ProblemSummary[]> {
@@ -209,8 +216,100 @@ export async function getStandings(contestSlug: string, labels: string[]): Promi
   }));
 }
 
-export function listRecentSubmissions(): SubmissionSummary[] {
-  return submissions;
+export async function listRecentSubmissions(): Promise<SubmissionSummary[]> {
+  if (!hasSupabaseEnv()) {
+    const localSubmissions = await listLocalSubmissionSummaries();
+    return localSubmissions.length ? localSubmissions : submissions;
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data, error } = await supabase
+    .from("submissions")
+    .select("id,problem_version_id,verdict,language,runtime_ms,memory_kb,submitted_at")
+    .order("submitted_at", { ascending: false })
+    .limit(10);
+
+  if (error || !data) {
+    return [];
+  }
+
+  const problemTitles = await problemTitlesByVersionIds(data.map((submission) => submission.problem_version_id));
+
+  return data.map((submission) => {
+    const problem = problemTitles.get(String(submission.problem_version_id));
+    return {
+      id: String(submission.id),
+      problemSlug: problem?.slug ?? "unknown",
+      problemTitle: problem?.title ?? "Unknown Problem",
+      verdict: toVerdict(submission.verdict),
+      language: "python3",
+      runtimeMs: Number(submission.runtime_ms ?? 0),
+      memoryKb: submission.memory_kb == null ? undefined : Number(submission.memory_kb),
+      submittedAt: String(submission.submitted_at),
+    };
+  });
+}
+
+export async function getSubmissionDetail(id: string): Promise<SubmissionDetail | undefined> {
+  if (!hasSupabaseEnv()) {
+    const local = await getLocalSubmission(id);
+    if (!local) {
+      const mock = submissions.find((submission) => submission.id === id);
+      return mock ? { ...mock, tests: [] } : undefined;
+    }
+
+    return {
+      id: local.id,
+      problemSlug: local.problemSlug,
+      problemTitle: local.problemTitle,
+      verdict: local.verdict,
+      language: local.language,
+      runtimeMs: local.runtimeMs,
+      memoryKb: local.memoryKb,
+      submittedAt: local.submittedAt,
+      sourceCode: local.sourceCode,
+      tests: local.tests,
+    };
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: submission, error: submissionError } = await supabase
+    .from("submissions")
+    .select("id,problem_version_id,verdict,language,source_code,runtime_ms,memory_kb,submitted_at")
+    .eq("id", id)
+    .single();
+
+  if (submissionError || !submission) {
+    return undefined;
+  }
+
+  const problemTitles = await problemTitlesByVersionIds([submission.problem_version_id]);
+  const problem = problemTitles.get(String(submission.problem_version_id));
+  const { data: tests } = await supabase
+    .from("submission_test_results")
+    .select("test_index,visibility,verdict,runtime_ms,memory_kb,message_public")
+    .eq("submission_id", id)
+    .order("test_index");
+
+  return {
+    id: String(submission.id),
+    problemSlug: problem?.slug ?? "unknown",
+    problemTitle: problem?.title ?? "Unknown Problem",
+    verdict: toVerdict(submission.verdict),
+    language: "python3",
+    runtimeMs: Number(submission.runtime_ms ?? 0),
+    memoryKb: submission.memory_kb == null ? undefined : Number(submission.memory_kb),
+    submittedAt: String(submission.submitted_at),
+    sourceCode: String(submission.source_code),
+    tests: (tests ?? []).map((test) => ({
+      testIndex: Number(test.test_index),
+      status: toVerdict(test.verdict),
+      runtimeMs: Number(test.runtime_ms ?? 0),
+      memoryKb: test.memory_kb == null ? undefined : Number(test.memory_kb),
+      message: String(test.message_public ?? ""),
+      visibleToUser: test.visibility === "public",
+    })),
+  };
 }
 
 function toDifficulty(value: unknown): ProblemSummary["difficulty"] {
@@ -223,3 +322,60 @@ function toChecker(value: unknown): ProblemDetail["checker"] {
     : "token";
 }
 
+function toVerdict(value: unknown): SubmissionSummary["verdict"] {
+  return value === "queued" ||
+    value === "compiling" ||
+    value === "running" ||
+    value === "accepted" ||
+    value === "wrong_answer" ||
+    value === "time_limit_exceeded" ||
+    value === "memory_limit_exceeded" ||
+    value === "runtime_error" ||
+    value === "compilation_error" ||
+    value === "output_limit_exceeded" ||
+    value === "judge_error"
+    ? value
+    : "judge_error";
+}
+
+async function problemTitlesByVersionIds(versionIds: unknown[]) {
+  const supabase = await createSupabaseServerClient();
+  const normalizedVersionIds = versionIds.map(String);
+  const results = new Map<string, { slug: string; title: string }>();
+  if (!normalizedVersionIds.length) {
+    return results;
+  }
+
+  const { data: versions, error: versionsError } = await supabase
+    .from("problem_versions")
+    .select("id,problem_id")
+    .in("id", normalizedVersionIds);
+
+  if (versionsError || !versions?.length) {
+    return results;
+  }
+
+  const { data: problemRows, error: problemsError } = await supabase
+    .from("problems")
+    .select("id,slug,title")
+    .in(
+      "id",
+      versions.map((version) => version.problem_id),
+    );
+
+  if (problemsError || !problemRows?.length) {
+    return results;
+  }
+
+  for (const version of versions) {
+    const problem = problemRows.find((candidate) => candidate.id === version.problem_id);
+    if (problem) {
+      results.set(String(version.id), {
+        slug: String(problem.slug),
+        title: String(problem.title),
+      });
+    }
+  }
+
+  return results;
+}

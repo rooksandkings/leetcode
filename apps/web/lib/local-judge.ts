@@ -97,7 +97,7 @@ async function runJudgeCli(cliPath: string, problemPath: string, submissionPath:
   }
 }
 
-function findRepoRoot() {
+export function findRepoRoot() {
   let current = process.cwd();
 
   for (let depth = 0; depth < 8; depth += 1) {
@@ -118,4 +118,3 @@ function findRepoRoot() {
 
   throw new Error("Could not locate CodeArena repository root");
 }
-
