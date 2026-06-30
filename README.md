@@ -125,8 +125,10 @@ Admin problem creation:
 - Without Supabase env vars, drafts are stored in ignored `.local/problem-drafts.json` and shown in `/admin/problems`.
 - Without Supabase env vars, package verification results are stored in ignored `.local/package-verifications.json`.
 - Without Supabase env vars, verified package archives are stored in ignored `.local/problem-packages/`.
+- Without Supabase env vars, custom checker review decisions are stored in ignored `.local/checker-reviews.json`.
 - With Supabase env vars, `/api/admin/problems` inserts draft `problems` and `problem_versions` rows through Supabase RLS.
 - With Supabase env vars, `/api/admin/problem-packages/store` uploads verified archives to the private `problem-packages` Storage bucket.
+- With Supabase env vars, `/api/admin/problem-packages/checker-review` stores explicit approve/reject decisions in `custom_checker_reviews`.
 - Supabase `problem_versions` include fields for package verification reports and verified timestamps ahead of storage-backed publishing.
 
 Admin contest creation:

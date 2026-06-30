@@ -41,7 +41,7 @@
 - [x] Validate package manifest structure before draft save.
 - [x] Add immutable problem versions.
 - [x] Add built-in checker selection.
-- [ ] Add custom checker review workflow.
+- [x] Add custom checker review workflow.
 - [x] Add validator verification.
 - [x] Add deterministic generator verification.
 

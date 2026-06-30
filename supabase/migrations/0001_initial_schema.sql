@@ -194,6 +194,24 @@ create table public.admin_audit_logs (
   created_at timestamptz not null default now()
 );
 
+create table public.custom_checker_reviews (
+  id uuid primary key default gen_random_uuid(),
+  storage_path text unique not null,
+  checksum_sha256 text not null check (checksum_sha256 ~ '^[a-f0-9]{64}$'),
+  package_slug citext not null,
+  has_custom_checker boolean not null,
+  status text not null check (status in ('not_required', 'approved', 'rejected')),
+  notes text not null default '',
+  reviewed_by uuid references public.profiles(id),
+  reviewed_at timestamptz not null default now(),
+  created_at timestamptz not null default now(),
+  check (
+    (has_custom_checker and status in ('approved', 'rejected'))
+    or (not has_custom_checker and status = 'not_required')
+  ),
+  check (status <> 'rejected' or length(trim(notes)) > 0)
+);
+
 insert into storage.buckets (
   id,
   name,
@@ -762,6 +780,7 @@ alter table public.submission_test_results enable row level security;
 alter table public.judge_jobs enable row level security;
 alter table public.ai_generations enable row level security;
 alter table public.admin_audit_logs enable row level security;
+alter table public.custom_checker_reviews enable row level security;
 
 create policy "profiles are publicly readable" on public.profiles
 for select using (true);
@@ -866,6 +885,10 @@ with check (public.is_admin());
 
 create policy "admins read audit logs" on public.admin_audit_logs
 for select using (public.is_admin());
+
+create policy "admins manage custom checker reviews" on public.custom_checker_reviews
+for all using (public.is_admin())
+with check (public.is_admin());
 
 create policy "admins manage problem package artifacts" on storage.objects
 for all using (bucket_id = 'problem-packages' and public.is_admin())

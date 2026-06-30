@@ -7,11 +7,17 @@ import type { CheckerType, ProblemSummary } from "@codearena/shared";
 type SaveState = "idle" | "saving" | "saved" | "error";
 type VerifyState = "idle" | "verifying" | "passed" | "failed" | "error";
 type StoreState = "idle" | "storing" | "stored" | "error";
+type ReviewState = "idle" | "saving" | "saved" | "error";
 
 type VerificationReport = {
   ok: boolean;
   errors: string[];
   warnings: string[];
+  package?: {
+    slug: string;
+    checker: string;
+    hasCustomChecker: boolean;
+  };
 };
 
 type StoredArtifact = {
@@ -52,14 +58,17 @@ export function NewProblemForm() {
   const [packageFile, setPackageFile] = useState<File | null>(null);
   const [verifyState, setVerifyState] = useState<VerifyState>("idle");
   const [storeState, setStoreState] = useState<StoreState>("idle");
+  const [reviewState, setReviewState] = useState<ReviewState>("idle");
   const [verificationReport, setVerificationReport] = useState<VerificationReport | null>(null);
   const [storedArtifact, setStoredArtifact] = useState<StoredArtifact | null>(null);
+  const [reviewNotes, setReviewNotes] = useState("");
   const [state, setState] = useState<SaveState>("idle");
   const [message, setMessage] = useState("");
 
   async function verifyPackage() {
     setVerifyState("verifying");
     setStoreState("idle");
+    setReviewState("idle");
     setVerificationReport(null);
     setStoredArtifact(null);
 
@@ -103,6 +112,41 @@ export function NewProblemForm() {
     setVerificationReport(payload.artifact.report);
     setVerifyState(payload.artifact.report.ok ? "passed" : "failed");
     setStoreState("stored");
+  }
+
+  async function saveCheckerReview(status: "not_required" | "approved" | "rejected") {
+    if (!storedArtifact?.report.package) {
+      setReviewState("error");
+      return;
+    }
+
+    setReviewState("saving");
+    const response = await fetch("/api/admin/problem-packages/checker-review", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        storagePath: storedArtifact.storagePath,
+        checksumSha256: storedArtifact.checksumSha256,
+        packageSlug: storedArtifact.report.package.slug,
+        hasCustomChecker: storedArtifact.report.package.hasCustomChecker,
+        status,
+        notes: reviewNotes,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = (await response.json()) as { error?: string };
+      setReviewState("error");
+      setVerificationReport({
+        ok: false,
+        errors: [payload.error ?? "Checker review save failed"],
+        warnings: [],
+        package: storedArtifact.report.package,
+      });
+      return;
+    }
+
+    setReviewState("saved");
   }
 
   async function saveDraft() {
@@ -246,6 +290,32 @@ export function NewProblemForm() {
                 <p className="subtle">{storedArtifact.storagePath}</p>
                 <p className="subtle">SHA-256 {storedArtifact.checksumSha256}</p>
                 {storedArtifact.localPath ? <p className="subtle">{storedArtifact.localPath}</p> : null}
+                {storedArtifact.report.package?.hasCustomChecker ? (
+                  <div className="form-grid">
+                    <label className="field">
+                      <span>Checker Review Notes</span>
+                      <textarea value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} />
+                    </label>
+                    <div className="actions">
+                      <button className="secondary-button" disabled={reviewState === "saving"} type="button" onClick={() => saveCheckerReview("approved")}>
+                        Approve Checker
+                      </button>
+                      <button className="danger-button" disabled={reviewState === "saving"} type="button" onClick={() => saveCheckerReview("rejected")}>
+                        Reject Checker
+                      </button>
+                      {reviewState === "saved" ? <span className="status accepted">review saved</span> : null}
+                      {reviewState === "error" ? <span className="status failed">review failed</span> : null}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="actions">
+                    <button className="secondary-button" disabled={reviewState === "saving"} type="button" onClick={() => saveCheckerReview("not_required")}>
+                      Mark Checker Review Not Required
+                    </button>
+                    {reviewState === "saved" ? <span className="status accepted">review saved</span> : null}
+                    {reviewState === "error" ? <span className="status failed">review failed</span> : null}
+                  </div>
+                )}
               </div>
             ) : null}
             {verificationReport ? (
