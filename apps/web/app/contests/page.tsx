@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { CalendarDays } from "lucide-react";
-import { contests } from "@/lib/mock-data";
+import { listContests } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
-export default function ContestsPage() {
+export default async function ContestsPage() {
+  const contests = await listContests();
+
   return (
     <main className="page">
       <section className="page-header">
@@ -30,4 +32,3 @@ export default function ContestsPage() {
     </main>
   );
 }
-

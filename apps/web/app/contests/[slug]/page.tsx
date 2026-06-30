@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ListChecks } from "lucide-react";
-import { contestProblems, contests } from "@/lib/mock-data";
+import { getContest, listContestProblems } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
 type PageProps = {
@@ -10,7 +10,7 @@ type PageProps = {
 
 export default async function ContestPage({ params }: PageProps) {
   const { slug } = await params;
-  const contest = contests.find((candidate) => candidate.slug === slug);
+  const [contest, contestProblems] = await Promise.all([getContest(slug), listContestProblems(slug)]);
 
   if (!contest) {
     notFound();
@@ -48,4 +48,3 @@ export default async function ContestPage({ params }: PageProps) {
     </main>
   );
 }
-

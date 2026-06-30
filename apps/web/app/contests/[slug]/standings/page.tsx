@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
 import { StandingsTable } from "@/components/standings-table";
-import { contestEvents, contestProblems, contests } from "@/lib/mock-data";
-import { deriveStandings } from "@/lib/icpc";
+import { getContest, getStandings, listContestProblems } from "@/lib/data";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -9,14 +8,14 @@ type PageProps = {
 
 export default async function StandingsPage({ params }: PageProps) {
   const { slug } = await params;
-  const contest = contests.find((candidate) => candidate.slug === slug);
+  const [contest, contestProblems] = await Promise.all([getContest(slug), listContestProblems(slug)]);
 
   if (!contest) {
     notFound();
   }
 
   const labels = contestProblems.map((problem) => problem.label);
-  const rows = deriveStandings(contestEvents, labels);
+  const rows = await getStandings(contest.slug, labels);
 
   return (
     <main className="page">
@@ -30,4 +29,3 @@ export default async function StandingsPage({ params }: PageProps) {
     </main>
   );
 }
-

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SubmissionPanel } from "@/components/submission-panel";
-import { problems } from "@/lib/mock-data";
+import { getProblem } from "@/lib/data";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
@@ -8,7 +8,7 @@ type PageProps = {
 
 export default async function ProblemPage({ params }: PageProps) {
   const { slug } = await params;
-  const problem = problems.find((candidate) => candidate.slug === slug);
+  const problem = await getProblem(slug);
 
   if (!problem) {
     notFound();
@@ -34,19 +34,27 @@ export default async function ProblemPage({ params }: PageProps) {
           <p>{problem.input}</p>
           <h3>Output</h3>
           <p>{problem.output}</p>
-          <h3>Constraints</h3>
-          <ul>
-            {problem.constraints.map((constraint) => (
-              <li key={constraint}>{constraint}</li>
-            ))}
-          </ul>
-          <h3>Sample</h3>
-          {problem.samples.map((sample, index) => (
-            <div className="grid two" key={index}>
-              <pre>{sample.input}</pre>
-              <pre>{sample.output}</pre>
-            </div>
-          ))}
+          {problem.constraints.length ? (
+            <>
+              <h3>Constraints</h3>
+              <ul>
+                {problem.constraints.map((constraint) => (
+                  <li key={constraint}>{constraint}</li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {problem.samples.length ? (
+            <>
+              <h3>Sample</h3>
+              {problem.samples.map((sample, index) => (
+                <div className="grid two" key={index}>
+                  <pre>{sample.input}</pre>
+                  <pre>{sample.output}</pre>
+                </div>
+              ))}
+            </>
+          ) : null}
         </article>
 
         <SubmissionPanel problemSlug={problem.slug} />
@@ -54,4 +62,3 @@ export default async function ProblemPage({ params }: PageProps) {
     </main>
   );
 }
-

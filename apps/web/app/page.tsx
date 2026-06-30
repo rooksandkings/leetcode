@@ -2,11 +2,15 @@ import Link from "next/link";
 import { ArrowRight, CheckCircle2, Clock3, Trophy } from "lucide-react";
 import { ProblemTable } from "@/components/problem-table";
 import { StatusPill } from "@/components/status-pill";
-import { contests, problems, submissions } from "@/lib/mock-data";
+import { listContests, listProblems, listRecentSubmissions } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [problems, contests] = await Promise.all([listProblems(), listContests()]);
+  const submissions = listRecentSubmissions();
   const accepted = submissions.filter((submission) => submission.verdict === "accepted").length;
+  const nextContest = contests[0];
+  const firstProblem = problems[0];
 
   return (
     <main className="page">
@@ -16,10 +20,12 @@ export default function DashboardPage() {
           <h1>CodeArena</h1>
           <p className="subtle">Python-only ICPC contests with admin-reviewed problem packages.</p>
         </div>
-        <Link className="primary-button" href="/problems/sum-array">
-          <ArrowRight size={16} />
-          Open Problem A
-        </Link>
+        {firstProblem ? (
+          <Link className="primary-button" href={`/problems/${firstProblem.slug}`}>
+            <ArrowRight size={16} />
+            Open Problem A
+          </Link>
+        ) : null}
       </section>
 
       <section className="stat-grid">
@@ -58,11 +64,17 @@ export default function DashboardPage() {
         <aside className="grid">
           <section className="panel">
             <h2>Next Contest</h2>
-            <h3>{contests[0].title}</h3>
-            <p className="subtle">{formatDateTime(contests[0].startsAt)}</p>
-            <Link className="secondary-button" href={`/contests/${contests[0].slug}`}>
-              Contest Room
-            </Link>
+            {nextContest ? (
+              <>
+                <h3>{nextContest.title}</h3>
+                <p className="subtle">{formatDateTime(nextContest.startsAt)}</p>
+                <Link className="secondary-button" href={`/contests/${nextContest.slug}`}>
+                  Contest Room
+                </Link>
+              </>
+            ) : (
+              <p className="subtle">No public contests yet.</p>
+            )}
           </section>
 
           <section className="panel">
@@ -84,4 +96,3 @@ export default function DashboardPage() {
     </main>
   );
 }
-

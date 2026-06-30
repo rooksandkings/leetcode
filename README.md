@@ -93,6 +93,11 @@ Submission behavior:
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.
 
+Data behavior:
+
+- Without Supabase env vars, the app reads seed data from `apps/web/lib/mock-data.ts`.
+- With Supabase env vars, public problem, contest, contest-problem, and standings pages read from Supabase through `apps/web/lib/data.ts`.
+
 ## Supabase
 
 The initial schema lives in `supabase/migrations/0001_initial_schema.sql`.

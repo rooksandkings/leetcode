@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { FilePlus2, Wand2 } from "lucide-react";
 import { ProblemTable } from "@/components/problem-table";
-import { problems } from "@/lib/mock-data";
+import { listProblems } from "@/lib/data";
 
-export default function AdminProblemsPage() {
+export default async function AdminProblemsPage() {
+  const problems = await listProblems();
+
   return (
     <main className="page">
       <section className="page-header">
@@ -26,4 +28,3 @@ export default function AdminProblemsPage() {
     </main>
   );
 }
-
