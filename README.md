@@ -94,6 +94,7 @@ Submission behavior:
 ## Supabase
 
 The initial schema lives in `supabase/migrations/0001_initial_schema.sql`.
+The seed data lives in `supabase/seed.sql`.
 
 It includes:
 
