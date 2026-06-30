@@ -70,8 +70,12 @@ insert into public.contests (
   slug,
   title,
   description,
+  registration_opens_at,
+  registration_closes_at,
   starts_at,
   ends_at,
+  standings_frozen_at,
+  standings_released_at,
   visibility,
   published_at
 )
@@ -80,8 +84,12 @@ values (
   'summer-sprint-1',
   'Summer Sprint 1',
   'Seed ICPC-style Python contest.',
+  '2026-06-30T00:00:00Z',
+  '2026-07-05T17:55:00Z',
   '2026-07-05T18:00:00Z',
   '2026-07-05T20:00:00Z',
+  '2026-07-05T19:30:00Z',
+  '2026-07-05T20:05:00Z',
   'public',
   now()
 )

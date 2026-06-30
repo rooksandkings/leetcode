@@ -107,8 +107,9 @@ Contest registration behavior:
 - Without Supabase env vars, registration is stored in ignored `.local/contest-registrations.json` and the `local` handle appears in standings even before submitting.
 - With Supabase env vars, `/api/contests/[slug]/registration` writes to `contest_registrations` through Supabase RLS.
 - Contest cards and contest headers show the current registered count from local storage or Supabase.
-- Registration closes at contest start; leaving after start or after submitting is blocked by the Supabase policy.
+- Registration uses explicit open/close windows; leaving after start or after submitting is blocked by the Supabase policy.
 - Supabase registrations snapshot the participant handle so historical standings do not change after profile edits.
+- Supabase contests model registration open/close windows plus standings freeze/release timestamps.
 
 Data behavior:
 

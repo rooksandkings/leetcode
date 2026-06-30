@@ -81,14 +81,27 @@ create table public.contests (
   slug citext unique not null,
   title text not null,
   description text,
+  registration_opens_at timestamptz,
+  registration_closes_at timestamptz,
   starts_at timestamptz not null,
   ends_at timestamptz not null,
+  standings_frozen_at timestamptz,
+  standings_released_at timestamptz,
   visibility public.content_visibility not null default 'draft',
   created_by uuid references public.profiles(id),
   published_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  check (ends_at > starts_at)
+  check (ends_at > starts_at),
+  check (registration_opens_at is null or registration_opens_at <= starts_at),
+  check (registration_closes_at is null or registration_closes_at <= starts_at),
+  check (
+    registration_opens_at is null
+    or registration_closes_at is null
+    or registration_opens_at <= registration_closes_at
+  ),
+  check (standings_frozen_at is null or standings_frozen_at between starts_at and ends_at),
+  check (standings_released_at is null or standings_released_at >= starts_at)
 );
 
 create table public.contest_problems (
@@ -655,7 +668,8 @@ for insert with check (
     select 1 from public.contests c
     where c.id = contest_id
       and c.visibility in ('public', 'unlisted')
-      and now() < c.starts_at
+      and now() >= coalesce(c.registration_opens_at, '-infinity'::timestamptz)
+      and now() < coalesce(c.registration_closes_at, c.starts_at)
   )
 );
 
