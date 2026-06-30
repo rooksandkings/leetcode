@@ -25,6 +25,7 @@ export default async function SubmissionPage({ params }: PageProps) {
           <p className="subtle">
             {submission.problemTitle} - {submission.language} - {formatDateTime(submission.submittedAt)}
           </p>
+          {submission.contestSlug ? <p className="subtle">Contest: {submission.contestSlug}</p> : null}
         </div>
         <StatusPill verdict={submission.verdict} />
       </section>
@@ -47,4 +48,3 @@ export default async function SubmissionPage({ params }: PageProps) {
     </main>
   );
 }
-

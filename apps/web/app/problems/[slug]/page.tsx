@@ -4,10 +4,12 @@ import { getProblem } from "@/lib/data";
 
 type PageProps = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ contest?: string }>;
 };
 
-export default async function ProblemPage({ params }: PageProps) {
+export default async function ProblemPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
+  const { contest } = await searchParams;
   const problem = await getProblem(slug);
 
   if (!problem) {
@@ -57,7 +59,7 @@ export default async function ProblemPage({ params }: PageProps) {
           ) : null}
         </article>
 
-        <SubmissionPanel problemSlug={problem.slug} />
+        <SubmissionPanel contestSlug={contest} problemSlug={problem.slug} />
       </section>
     </main>
   );

@@ -1,5 +1,4 @@
-import { existsSync } from "node:fs";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import type { SubmissionSummary, TestResult, Verdict } from "@codearena/shared";
 import { findRepoRoot } from "@/lib/local-judge";
@@ -9,6 +8,7 @@ export type LocalSubmissionRecord = {
   id: string;
   problemSlug: string;
   problemTitle: string;
+  contestSlug?: string;
   language: "python3";
   sourceCode: string;
   verdict: Verdict;
@@ -23,18 +23,18 @@ type StoreShape = {
 };
 
 export async function recordLocalSubmission(record: LocalSubmissionRecord) {
-  const store = await readStore();
+  const store = readStore();
   const submissions = [record, ...store.submissions.filter((submission) => submission.id !== record.id)].slice(0, 100);
-  await writeStore({ submissions });
+  writeStore({ submissions });
 }
 
 export async function getLocalSubmission(id: string): Promise<LocalSubmissionRecord | undefined> {
-  const store = await readStore();
+  const store = readStore();
   return store.submissions.find((submission) => submission.id === id);
 }
 
 export async function listLocalSubmissionSummaries(limit = 10): Promise<SubmissionSummary[]> {
-  const store = await readStore();
+  const store = readStore();
   return store.submissions.slice(0, limit).map((submission) => ({
     id: submission.id,
     problemSlug: submission.problemSlug,
@@ -47,30 +47,34 @@ export async function listLocalSubmissionSummaries(limit = 10): Promise<Submissi
   }));
 }
 
+export async function listLocalContestSubmissions(contestSlug: string): Promise<LocalSubmissionRecord[]> {
+  const store = readStore();
+  return store.submissions.filter((submission) => submission.contestSlug === contestSlug);
+}
+
 export function problemTitleForSlug(slug: string) {
   return problems.find((problem) => problem.slug === slug)?.title ?? slug;
 }
 
-async function readStore(): Promise<StoreShape> {
+function readStore(): StoreShape {
   const storePath = localStorePath();
   if (!existsSync(storePath)) {
     return { submissions: [] };
   }
 
-  const raw = await readFile(storePath, "utf-8");
+  const raw = readFileSync(storePath, "utf-8");
   const parsed = JSON.parse(raw) as Partial<StoreShape>;
   return {
     submissions: Array.isArray(parsed.submissions) ? parsed.submissions : [],
   };
 }
 
-async function writeStore(store: StoreShape) {
+function writeStore(store: StoreShape) {
   const storePath = localStorePath();
-  await mkdir(path.dirname(storePath), { recursive: true });
-  await writeFile(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
+  mkdirSync(path.dirname(storePath), { recursive: true });
+  writeFileSync(storePath, `${JSON.stringify(store, null, 2)}\n`, "utf-8");
 }
 
 function localStorePath() {
   return path.join(findRepoRoot(), ".local", "submissions.json");
 }
-

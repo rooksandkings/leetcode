@@ -2,7 +2,7 @@ import type { ContestSummary, ProblemSummary, StandingRow, SubmissionSummary } f
 import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
 import { deriveStandings } from "@/lib/icpc";
-import { getLocalSubmission, listLocalSubmissionSummaries } from "@/lib/local-submissions";
+import { getLocalSubmission, listLocalContestSubmissions, listLocalSubmissionSummaries } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
 
 type ContestProblem = {
@@ -12,6 +12,7 @@ type ContestProblem = {
 };
 
 export type SubmissionDetail = SubmissionSummary & {
+  contestSlug?: string;
   sourceCode?: string;
   tests: LocalSubmissionRecord["tests"];
 };
@@ -181,7 +182,29 @@ export async function listContestProblems(contestSlug: string): Promise<ContestP
 
 export async function getStandings(contestSlug: string, labels: string[]): Promise<StandingRow[]> {
   if (!hasSupabaseEnv()) {
-    return deriveStandings(contestEvents, labels);
+    const localContestSubmissions = await listLocalContestSubmissions(contestSlug);
+    if (!localContestSubmissions.length) {
+      return deriveStandings(contestEvents, labels);
+    }
+
+    const contest = contests.find((candidate) => candidate.slug === contestSlug);
+    const contestStartMs = contest ? new Date(contest.startsAt).getTime() : Date.now();
+    const localEvents = localContestSubmissions.flatMap((submission) => {
+      const problem = contestProblems.find((candidate) => candidate.slug === submission.problemSlug);
+      if (!problem) {
+        return [];
+      }
+
+      const rawMinute = Math.floor((new Date(submission.submittedAt).getTime() - contestStartMs) / 60000);
+      return {
+        handle: "local",
+        problemLabel: problem.label,
+        verdict: submission.verdict === "accepted" ? "accepted" : "wrong_answer",
+        minute: Math.max(0, rawMinute),
+      };
+    });
+
+    return deriveStandings([...contestEvents, ...localEvents], labels);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -263,6 +286,7 @@ export async function getSubmissionDetail(id: string): Promise<SubmissionDetail 
       problemSlug: local.problemSlug,
       problemTitle: local.problemTitle,
       verdict: local.verdict,
+      contestSlug: local.contestSlug,
       language: local.language,
       runtimeMs: local.runtimeMs,
       memoryKb: local.memoryKb,

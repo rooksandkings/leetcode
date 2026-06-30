@@ -9,6 +9,7 @@ export async function POST(request: Request) {
   const body = (await request.json()) as {
     problemSlug?: string;
     contestId?: string;
+    contestSlug?: string;
     language?: string;
     sourceCode?: string;
   };
@@ -39,9 +40,20 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Problem is not available" }, { status: 404 });
     }
 
+    let contestId = body.contestId ?? null;
+    if (!contestId && body.contestSlug) {
+      const { data: contest } = await supabase
+        .from("contests")
+        .select("id")
+        .eq("slug", body.contestSlug)
+        .eq("visibility", "public")
+        .single();
+      contestId = contest?.id ?? null;
+    }
+
     const { data: submissionId, error: submitError } = await supabase.rpc("submit_solution", {
       p_problem_version_id: problem.current_version_id,
-      p_contest_id: body.contestId ?? null,
+      p_contest_id: contestId,
       p_source_code: body.sourceCode,
     });
 
@@ -70,6 +82,7 @@ export async function POST(request: Request) {
       id,
       problemSlug: body.problemSlug,
       problemTitle: problemTitleForSlug(body.problemSlug),
+      contestSlug: body.contestSlug,
       language: "python3",
       sourceCode: body.sourceCode,
       verdict: result.verdict,

@@ -30,7 +30,7 @@ type SubmissionResponse = {
   tests?: TestResult[];
 };
 
-export function SubmissionPanel({ problemSlug }: { problemSlug: string }) {
+export function SubmissionPanel({ problemSlug, contestSlug }: { problemSlug: string; contestSlug?: string }) {
   const [code, setCode] = useState(starterCode);
   const [state, setState] = useState<SubmitState>("idle");
   const [message, setMessage] = useState("");
@@ -48,6 +48,7 @@ export function SubmissionPanel({ problemSlug }: { problemSlug: string }) {
       },
       body: JSON.stringify({
         problemSlug,
+        contestSlug,
         language: "python3",
         sourceCode: code,
       }),
@@ -84,6 +85,7 @@ export function SubmissionPanel({ problemSlug }: { problemSlug: string }) {
         <div>
           <p className="eyebrow">Python 3</p>
           <h2>Submit</h2>
+          {contestSlug ? <p className="subtle">Contest submission for {contestSlug}</p> : null}
         </div>
         <button className="secondary-button" type="button" onClick={reset}>
           <RotateCcw size={16} />

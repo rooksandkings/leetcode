@@ -34,7 +34,7 @@ export default async function ContestPage({ params }: PageProps) {
 
       <section className="grid">
         {contestProblems.map((problem) => (
-          <Link className="card" href={`/problems/${problem.slug}`} key={problem.label}>
+          <Link className="card" href={`/problems/${problem.slug}?contest=${contest.slug}`} key={problem.label}>
             <div className="page-header">
               <div>
                 <p className="eyebrow">Problem {problem.label}</p>
