@@ -133,6 +133,81 @@ export async function getProblem(slug: string): Promise<ProblemDetail | undefine
   };
 }
 
+export async function getContestProblem(contestSlug: string, problemSlug: string): Promise<ProblemDetail | undefined> {
+  if (!hasSupabaseEnv()) {
+    if (!contests.some((contest) => contest.slug === contestSlug)) {
+      return undefined;
+    }
+    if (!contestProblems.some((problem) => problem.slug === problemSlug)) {
+      return undefined;
+    }
+    return problems.find((problem) => problem.slug === problemSlug);
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: contest, error: contestError } = await supabase
+    .from("contests")
+    .select("id")
+    .eq("slug", contestSlug)
+    .eq("visibility", "public")
+    .single();
+
+  if (contestError || !contest) {
+    return undefined;
+  }
+
+  const { data: problem, error: problemError } = await supabase
+    .from("problems")
+    .select("id,slug,title,difficulty,tags")
+    .eq("slug", problemSlug)
+    .eq("visibility", "public")
+    .single();
+
+  if (problemError || !problem) {
+    return undefined;
+  }
+
+  const { data: contestProblemRows, error: contestProblemsError } = await supabase
+    .from("contest_problems")
+    .select("problem_version_id")
+    .eq("contest_id", contest.id);
+
+  if (contestProblemsError || !contestProblemRows?.length) {
+    return undefined;
+  }
+
+  const { data: version, error: versionError } = await supabase
+    .from("problem_versions")
+    .select("id,statement_md,time_limit_ms,memory_limit_mb,checker")
+    .eq("problem_id", problem.id)
+    .in(
+      "id",
+      contestProblemRows.map((row) => row.problem_version_id),
+    )
+    .single();
+
+  if (versionError || !version) {
+    return undefined;
+  }
+
+  return {
+    slug: String(problem.slug),
+    title: String(problem.title),
+    difficulty: toDifficulty(problem.difficulty),
+    tags: Array.isArray(problem.tags) ? problem.tags.map(String) : [],
+    acceptedCount: 0,
+    submissionCount: 0,
+    checker: toChecker(version.checker),
+    timeLimitMs: Number(version.time_limit_ms),
+    memoryLimitMb: Number(version.memory_limit_mb),
+    statement: String(version.statement_md),
+    input: "See the problem statement.",
+    output: "See the problem statement.",
+    constraints: [],
+    samples: [],
+  };
+}
+
 export async function listContests(): Promise<ContestSummary[]> {
   if (!hasSupabaseEnv()) {
     return contests.map((contest) => ({

@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { SubmissionPanel } from "@/components/submission-panel";
-import { getContest, getProblem } from "@/lib/data";
+import { getContest, getContestProblem, getProblem } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
 type PageProps = {
@@ -31,7 +31,7 @@ export default async function ProblemPage({ params, searchParams }: PageProps) {
     );
   }
 
-  const problem = await getProblem(slug);
+  const problem = contestContext ? await getContestProblem(contestContext.slug, slug) : await getProblem(slug);
 
   if (!problem) {
     notFound();

@@ -94,6 +94,7 @@ Submission behavior:
 - Contest problem links pass contest context into submissions; local contest submissions are folded into the ICPC standings as the `local` handle.
 - Local contest submissions require registration, a valid contest problem, and an active contest window before they can affect standings.
 - Contest submissions use the server-resolved contest slug and locked contest problem version, not a client-supplied contest id.
+- Contest problem pages resolve statements from the locked contest version after start, matching the judged version.
 - Supabase standings include per-problem solved and wrong-attempt cells through `contest_standings.problem_results`.
 - Future contest pages keep problem titles, links, and direct contest problem statements locked until `startsAt`.
 - With Supabase env vars, `/api/submissions` requires an authenticated Supabase session and calls `submit_solution`.
