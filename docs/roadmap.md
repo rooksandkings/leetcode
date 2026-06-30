@@ -17,11 +17,11 @@
 
 ## Phase 3: Fly Worker
 
-- Package the judge worker.
-- Claim jobs from Supabase.
-- Download problem packages.
-- Run submissions on Fly with Linux sandbox controls.
-- Write final verdicts and redacted test results.
+- Package the judge worker. Done.
+- Claim jobs from Supabase. Done.
+- Download problem packages. Done.
+- Run submissions on Fly with Linux sandbox controls. In progress.
+- Write final verdicts and redacted test results. Done.
 
 ## Phase 4: Competition
 
@@ -45,4 +45,3 @@
 - Generate sample tests.
 - Draft checkers and validators.
 - Require admin approval before publish.
-

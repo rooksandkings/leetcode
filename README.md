@@ -116,3 +116,29 @@ It includes:
 - Supabase stores users, problem metadata, submissions, judge jobs, and public contest state.
 - Supabase Storage stores versioned problem packages and generated artifacts.
 - Fly.io runs judge workers with Linux isolation and one active submission per sandbox.
+
+## Judge Worker Deployment
+
+The production worker entrypoint is `apps/judge-worker/worker.py`.
+
+Required environment variables:
+
+```text
+SUPABASE_URL=
+SUPABASE_SERVICE_ROLE_KEY=
+```
+
+Optional environment variables:
+
+```text
+WORKER_ID=
+LEASE_SECONDS=120
+WORKER_SLEEP_SECONDS=2
+```
+
+Fly.io files:
+
+- `apps/judge-worker/Dockerfile`
+- `apps/judge-worker/fly.toml.example`
+
+The worker claims jobs through `lease_judge_job`, downloads the versioned problem package from Supabase Storage, runs the Python judge, and finalizes the submission through `finalize_submission`.

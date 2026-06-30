@@ -36,6 +36,15 @@ flowchart LR
 8. Worker writes the final verdict to `submissions`.
 9. UI updates via polling first, then Supabase Realtime.
 
+## Worker Contract
+
+The Fly worker uses service-role RPCs:
+
+- `lease_judge_job(worker_id, lease_seconds)`
+- `finalize_submission(submission_id, verdict, runtime_ms, memory_kb, results)`
+
+Problem packages are zipped and stored in a private Supabase Storage bucket. The worker extracts each package to a temporary directory, writes the submitted source as `submission.py`, runs the dependency-free Python judge, and deletes the temporary directory when the job completes.
+
 ## ICPC Ranking
 
 Contest standings are derived from immutable submissions:
@@ -45,4 +54,3 @@ Contest standings are derived from immutable submissions:
 - Break further ties by last accepted minute ascending.
 - Wrong submissions before first AC add 20 penalty minutes.
 - Submissions after first AC do not affect scoring.
-

@@ -1,0 +1,17 @@
+app = "codearena-judge"
+primary_region = "ord"
+
+[build]
+  dockerfile = "apps/judge-worker/Dockerfile"
+
+[env]
+  LEASE_SECONDS = "120"
+  WORKER_SLEEP_SECONDS = "2"
+
+[processes]
+  app = "python worker.py"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
