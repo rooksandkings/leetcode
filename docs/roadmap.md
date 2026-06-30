@@ -2,48 +2,52 @@
 
 ## Phase 1: Vertical Slice
 
-- Seed one problem package.
-- Run Python submissions locally.
-- Return accepted, wrong answer, timeout, runtime error, and judge error.
-- Show problem, editor, submission status, and per-test details in the web app.
+- [x] Seed one problem package.
+- [x] Run Python submissions locally.
+- [x] Return accepted, wrong answer, timeout, runtime error, and judge error.
+- [x] Show problem, editor, submission status, and per-test details in the web app.
 
 ## Phase 2: Supabase Integration
 
-- Add migrations.
-- Create auth-backed profiles.
-- Persist problems, contests, submissions, test results, and jobs.
-- Add app route for submission creation.
-- Add coarse Realtime updates.
+- [x] Add migrations.
+- [x] Create auth-backed profiles.
+- [x] Persist problems, contests, submissions, test results, and jobs.
+- [x] Add app route for submission creation.
+- [ ] Add coarse Realtime updates.
 
 ## Phase 3: Fly Worker
 
-- Package the judge worker. Done.
-- Claim jobs from Supabase. Done.
-- Download problem packages. Done.
-- Run submissions on Fly with Linux sandbox controls. In progress.
-- Write final verdicts and redacted test results. Done.
+- [x] Package the judge worker.
+- [x] Claim jobs from Supabase.
+- [x] Download problem packages.
+- [ ] Run submissions on Fly with Linux sandbox controls.
+- [x] Write final verdicts and redacted test results.
 
 ## Phase 4: Competition
 
-- Add contest registration.
-- Add ICPC standings.
-- Add standings freeze support.
-- Add contest-specific problem aliases.
+- [x] Add contest registration.
+- [x] Add ICPC standings.
+- [x] Enforce contest registration, problem membership, and submission windows.
+- [x] Lock contest problem statements before start.
+- [x] Resolve contest submissions and statements against locked problem versions.
+- [x] Snapshot participant handles for historical standings.
+- [ ] Add standings freeze UI and release behavior.
+- [ ] Add admin contest creation and problem assignment.
 
 ## Phase 5: Admin Problemsetting
 
-- Add problem package upload.
-- Validate package structure before publish.
-- Add immutable problem versions.
-- Add built-in checker selection.
-- Add custom checker review.
-- Add validator verification. Done.
-- Add deterministic generator verification. Done.
+- [ ] Add problem package upload.
+- [x] Validate package manifest structure before draft save.
+- [x] Add immutable problem versions.
+- [x] Add built-in checker selection.
+- [ ] Add custom checker review workflow.
+- [x] Add validator verification.
+- [x] Add deterministic generator verification.
 
 ## Phase 6: AI Assist
 
-- Draft statements.
-- Generate edge-case ideas.
-- Generate sample tests.
-- Draft checkers and validators.
-- Require admin approval before publish.
+- [x] Draft statements.
+- [x] Generate edge-case ideas.
+- [x] Generate sample tests.
+- [x] Draft checkers and validators.
+- [x] Require admin approval before publish.
