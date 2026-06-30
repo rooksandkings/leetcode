@@ -123,6 +123,10 @@ It includes:
 - The UI may show per-test status, runtime, memory, and redacted messages, but not hidden inputs or expected outputs.
 - AI can draft content, but only an admin can publish it.
 
+## Dependency Audit Note
+
+`npm audit` currently reports a moderate PostCSS advisory through Next.js' pinned internal `postcss@8.4.31`. The app's direct PostCSS dependency is pinned to the patched `8.5.x` line, and `npm audit fix --force` is intentionally avoided because npm suggests a breaking downgrade path for Next.js.
+
 ## Deployment Plan
 
 - Vercel runs the Next.js app.

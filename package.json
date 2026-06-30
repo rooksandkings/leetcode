@@ -13,6 +13,11 @@
     "typecheck": "npm --workspace apps/web run typecheck",
     "judge:test": "python -m unittest discover apps/judge-worker/tests",
     "judge:sample": "python apps/judge-worker/cli.py judge --problem problems/sum-array --submission examples/submissions/sum_array_ac.py"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "^8.5.16"
+    },
+    "postcss": "^8.5.16"
   }
 }
-
