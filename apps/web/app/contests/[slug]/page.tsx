@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, ListChecks } from "lucide-react";
+import { ContestRegistrationPanel } from "@/components/contest-registration-panel";
 import { getContest, listContestProblems } from "@/lib/data";
 import { formatDateTime } from "@/lib/format";
 
@@ -23,13 +24,16 @@ export default async function ContestPage({ params }: PageProps) {
           <p className="eyebrow">Contest</p>
           <h1>{contest.title}</h1>
           <p className="subtle">
-            {formatDateTime(contest.startsAt)} · {contest.registeredCount} registered
+            {formatDateTime(contest.startsAt)} - {contest.registeredCount} registered
           </p>
         </div>
-        <Link className="primary-button" href={`/contests/${contest.slug}/standings`}>
-          <ListChecks size={16} />
-          Standings
-        </Link>
+        <div className="actions">
+          <ContestRegistrationPanel contestSlug={contest.slug} />
+          <Link className="secondary-button" href={`/contests/${contest.slug}/standings`}>
+            <ListChecks size={16} />
+            Standings
+          </Link>
+        </div>
       </section>
 
       <section className="grid">
@@ -48,3 +52,4 @@ export default async function ContestPage({ params }: PageProps) {
     </main>
   );
 }
+

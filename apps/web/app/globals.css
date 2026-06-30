@@ -378,6 +378,14 @@ tr:last-child td {
   gap: 10px;
 }
 
+.registration-actions {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
 .details {
   border: 1px solid var(--line);
   border-radius: 8px;

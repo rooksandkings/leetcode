@@ -3,6 +3,7 @@ import type { AdminProblemRow } from "@/components/admin-problem-table";
 import type { LocalSubmissionRecord } from "@/lib/local-submissions";
 import { contestEvents, contestProblems, contests, problems, submissions, type ProblemDetail } from "@/lib/mock-data";
 import { deriveStandings } from "@/lib/icpc";
+import { countLocalContestRegistrations, listLocalContestRegistrations } from "@/lib/local-contest-registrations";
 import { listLocalProblemDrafts } from "@/lib/local-problem-drafts";
 import { getLocalSubmission, listLocalContestSubmissions, listLocalSubmissionSummaries } from "@/lib/local-submissions";
 import { createSupabaseServerClient, hasSupabaseEnv } from "@/lib/supabase/server";
@@ -133,13 +134,16 @@ export async function getProblem(slug: string): Promise<ProblemDetail | undefine
 
 export async function listContests(): Promise<ContestSummary[]> {
   if (!hasSupabaseEnv()) {
-    return contests;
+    return contests.map((contest) => ({
+      ...contest,
+      registeredCount: contest.registeredCount + countLocalContestRegistrations(contest.slug),
+    }));
   }
 
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase
     .from("contests")
-    .select("slug,title,starts_at,ends_at")
+    .select("id,slug,title,starts_at,ends_at")
     .eq("visibility", "public")
     .order("starts_at");
 
@@ -147,12 +151,23 @@ export async function listContests(): Promise<ContestSummary[]> {
     return [];
   }
 
+  const counts = await Promise.all(
+    data.map(async (contest) => {
+      const { count } = await supabase
+        .from("contest_registrations")
+        .select("*", { count: "exact", head: true })
+        .eq("contest_id", contest.id);
+      return [String(contest.id), count ?? 0] as const;
+    }),
+  );
+  const countByContestId = new Map(counts);
+
   return data.map((contest) => ({
     slug: String(contest.slug),
     title: String(contest.title),
     startsAt: String(contest.starts_at),
     endsAt: String(contest.ends_at),
-    registeredCount: 0,
+    registeredCount: countByContestId.get(String(contest.id)) ?? 0,
   }));
 }
 
@@ -226,7 +241,8 @@ export async function listContestProblems(contestSlug: string): Promise<ContestP
 export async function getStandings(contestSlug: string, labels: string[]): Promise<StandingRow[]> {
   if (!hasSupabaseEnv()) {
     const localContestSubmissions = await listLocalContestSubmissions(contestSlug);
-    if (!localContestSubmissions.length) {
+    const localRegisteredHandles = listLocalContestRegistrations(contestSlug).map((registration) => registration.handle);
+    if (!localContestSubmissions.length && !localRegisteredHandles.length) {
       return deriveStandings(contestEvents, labels);
     }
 
@@ -247,7 +263,7 @@ export async function getStandings(contestSlug: string, labels: string[]): Promi
       };
     });
 
-    return deriveStandings([...contestEvents, ...localEvents], labels);
+    return deriveStandings([...contestEvents, ...localEvents], labels, localRegisteredHandles);
   }
 
   const supabase = await createSupabaseServerClient();

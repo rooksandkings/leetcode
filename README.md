@@ -8,6 +8,7 @@ The project is intentionally scoped as a serious portfolio build: Codeforces-sty
 
 - Public problem browsing and contest pages
 - Python 3 submissions only
+- Contest registration
 - ICPC standings: solved count, penalty, first accepted time
 - Admin-only problem creation
 - Final verdict shown by default with collapsible per-test details
@@ -95,6 +96,13 @@ Submission behavior:
 - `/login` uses Supabase magic links when env vars are configured.
 - Local judging is disabled in production unless `LOCAL_JUDGE_ENABLED=true` is explicitly set.
 
+Contest registration behavior:
+
+- `/contests/[slug]` supports registering and leaving a contest.
+- Without Supabase env vars, registration is stored in ignored `.local/contest-registrations.json` and the `local` handle appears in standings even before submitting.
+- With Supabase env vars, `/api/contests/[slug]/registration` writes to `contest_registrations` through Supabase RLS.
+- Contest cards and contest headers show the current registered count from local storage or Supabase.
+
 Data behavior:
 
 - Without Supabase env vars, the app reads seed data from `apps/web/lib/mock-data.ts`.
@@ -132,7 +140,7 @@ It includes:
 1. Ship the local judge vertical slice with exact, line, token, float, and custom checkers.
 2. Wire the Next.js submission form to Supabase submissions and judge jobs.
 3. Deploy a Fly.io judge worker that claims jobs and writes verdicts.
-4. Add contest registration and ICPC standings.
+4. Harden contest registration, locking, and ICPC standings edge cases.
 5. Add admin problem-package upload, validation, and immutable versions.
 6. Add AI-assisted problem drafting for admins with mandatory human review.
 

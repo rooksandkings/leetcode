@@ -7,8 +7,12 @@ export type ContestEvent = {
   minute: number;
 };
 
-export function deriveStandings(events: readonly ContestEvent[], problemLabels: readonly string[]): StandingRow[] {
-  const handles = [...new Set(events.map((event) => event.handle))].sort();
+export function deriveStandings(
+  events: readonly ContestEvent[],
+  problemLabels: readonly string[],
+  registeredHandles: readonly string[] = [],
+): StandingRow[] {
+  const handles = [...new Set([...events.map((event) => event.handle), ...registeredHandles])].sort();
   const rows = handles.map((handle) => {
     const problemResults: StandingRow["problemResults"] = {};
 

@@ -21,7 +21,7 @@ export default async function ContestsPage() {
               <div>
                 <h2>{contest.title}</h2>
                 <p className="subtle">
-                  {formatDateTime(contest.startsAt)} · {contest.registeredCount} registered
+                  {formatDateTime(contest.startsAt)} - {contest.registeredCount} registered
                 </p>
               </div>
               <CalendarDays size={22} />
