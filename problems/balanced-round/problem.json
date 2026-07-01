@@ -1,0 +1,51 @@
+{
+  "slug": "balanced-round",
+  "title": "Balanced Round",
+  "timeLimitMs": 2000,
+  "memoryLimitMb": 256,
+  "checker": {
+    "type": "token"
+  },
+  "validator": {
+    "path": "validators/validator.py"
+  },
+  "generator": {
+    "path": "generators/generator.py",
+    "cases": [
+      {
+        "seed": 1,
+        "input": "tests/001.in"
+      },
+      {
+        "seed": 2,
+        "input": "tests/002.in"
+      }
+    ]
+  },
+  "tests": [
+    {
+      "name": "sample-1",
+      "input": "samples/1.in",
+      "expected": "samples/1.out",
+      "hidden": false
+    },
+    {
+      "name": "sample-2",
+      "input": "samples/2.in",
+      "expected": "samples/2.out",
+      "hidden": false
+    },
+    {
+      "name": "hidden-chain",
+      "input": "tests/001.in",
+      "expected": "tests/001.out",
+      "hidden": true
+    },
+    {
+      "name": "hidden-separated",
+      "input": "tests/002.in",
+      "expected": "tests/002.out",
+      "hidden": true
+    }
+  ]
+}

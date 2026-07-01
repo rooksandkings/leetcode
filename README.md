@@ -8,6 +8,7 @@ The project is intentionally scoped as a serious portfolio build: Codeforces-sty
 
 - Public problem browsing and contest pages
 - Python 3 submissions only
+- Judge-ready local seed packages for every visible problem
 - Contest registration
 - ICPC standings: solved count, penalty, first accepted time
 - Admin-only problem creation

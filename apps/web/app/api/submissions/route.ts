@@ -19,7 +19,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Use contestSlug for contest submissions" }, { status: 400 });
   }
 
-  if (!body.problemSlug || body.language !== "python3" || !body.sourceCode?.trim()) {
+  if (
+    typeof body.problemSlug !== "string" ||
+    typeof body.sourceCode !== "string" ||
+    !body.problemSlug ||
+    body.language !== "python3" ||
+    !body.sourceCode.trim()
+  ) {
     return NextResponse.json({ error: "Invalid submission" }, { status: 400 });
   }
 
